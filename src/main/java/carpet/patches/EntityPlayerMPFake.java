@@ -2,6 +2,7 @@ package carpet.patches;
 
 import carpet.CarpetSettings;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.DisconnectionDetails;
@@ -11,6 +12,7 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -20,9 +22,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
@@ -144,11 +149,6 @@ public class EntityPlayerMPFake extends ServerPlayer
         return new EntityPlayerMPFake(server, level, profile, cli, false);
     }
 
-    public static boolean isSpawningPlayer(String username)
-    {
-        return spawning.contains(username);
-    }
-
     private EntityPlayerMPFake(MinecraftServer server, ServerLevel worldIn, GameProfile profile, ClientInformation cli, boolean shadow)
     {
         super(server, worldIn, profile, cli);
@@ -252,5 +252,33 @@ public class EntityPlayerMPFake extends ServerPlayer
             connection.player.hasChangedDimension();
         }
         return connection.player;
+    }
+
+    @Override
+    public boolean hurt(DamageSource damageSource, float f) {
+        if (f > 0.0f && this.isDamageSourceBlocked(damageSource)) {
+            this.hurtCurrentlyUsedShield(f);
+            // equivalent of Player::blockUsingShield without wonky KB
+            if (damageSource.getDirectEntity() instanceof LivingEntity le && le.canDisableShield()) {
+                this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
+                this.disableShield();
+
+                String ign = this.getGameProfile().getName();
+                CommandSourceStack commandSource = server.createCommandSourceStack().withSuppressedOutput();
+                ParseResults<CommandSourceStack> parseResults = server.getCommands().getDispatcher()
+                        .parse(String.format("function practicebot:shielddisable", ign), commandSource);
+                server.getCommands().performCommand(parseResults, "");
+            } else {
+                // shield block sound probably
+                this.playSound(SoundEvents.SHIELD_BLOCK, 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
+            }
+            // some stat tracking from LivingEntity::hurt
+            CriteriaTriggers.ENTITY_HURT_PLAYER.trigger((ServerPlayer)this, damageSource, f, 0, true);
+            if (f < 3.4028235E37F) {
+                ((ServerPlayer)this).awardStat(Stats.DAMAGE_BLOCKED_BY_SHIELD, Math.round(f * 10.0F));
+            }
+            return false;
+        }
+        return super.hurt(damageSource, f);
     }
 }
