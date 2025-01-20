@@ -210,8 +210,6 @@ public class EntityPlayerMPFake extends ServerPlayer
             // happens with that paper port thingy - not sure what that would fix, but hey
             // the game not gonna crash violently.
         }
-
-
     }
 
     private void shakeOff()
@@ -235,6 +233,19 @@ public class EntityPlayerMPFake extends ServerPlayer
         kill(this.getCombatTracker().getDeathMessage());
         this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
         this.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
+    }
+
+//    public void respawn()
+//    {
+//        this.setHealth(20);
+//        this.foodData = new FoodData();
+//        this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
+//        this.connection.send(new ClientboundRespawnPacket(this.createCommonSpawnInfo(serverLevel()), (byte)3));
+//    }
+
+    public void stop()
+    {
+
     }
 
     @Override
@@ -277,7 +288,14 @@ public class EntityPlayerMPFake extends ServerPlayer
             if (damageSource.getDirectEntity() instanceof LivingEntity le && le.canDisableShield()) {
                 this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
                 this.disableShield();
-                this.invulnerableTime = 20;
+                if(!CarpetSettings.shieldStunning) {
+                    this.invulnerableTime = 20;
+                }
+                String ign = this.getGameProfile().getName();
+                CommandSourceStack commandSource = server.createCommandSourceStack().withSuppressedOutput();
+                ParseResults<CommandSourceStack> parseResults = server.getCommands().getDispatcher()
+                        .parse(String.format("function practicebot:shielddisable", ign), commandSource);
+                server.getCommands().performCommand(parseResults, "");
             } else {
                 // shield block sound probably
                 this.playSound(SoundEvents.SHIELD_BLOCK, 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
