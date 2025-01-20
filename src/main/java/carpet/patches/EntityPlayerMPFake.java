@@ -2,7 +2,9 @@ package carpet.patches;
 
 import carpet.CarpetSettings;
 import com.mojang.authlib.GameProfile;
+import com.mojang.brigadier.ParseResults;
 import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.DisconnectionDetails;
@@ -40,19 +42,26 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import carpet.fakes.ServerPlayerInterface;
 import carpet.utils.Messenger;
+import carpet.helpers.EntityPlayerActionPack;
 
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("EntityConstructor")
 public class EntityPlayerMPFake extends ServerPlayer
 {
+    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private static final Set<String> spawning = new HashSet<>();
 
     public Runnable fixStartingPosition = () -> {};
     public boolean isAShadow;
+    public Vec3 spawnPos;
+    public double spawnYaw;
 
     // Returns true if it was successful, false if couldn't spawn due to the player not existing in Mojang servers
     public static boolean createFake(String username, MinecraftServer server, Vec3 pos, double yaw, double pitch, ResourceKey<Level> dimensionId, GameType gamemode, boolean flying)
@@ -105,6 +114,8 @@ public class EntityPlayerMPFake extends ServerPlayer
             instance.unsetRemoved();
             instance.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(0.6F);
             instance.gameMode.changeGameModeForPlayer(gamemode);
+            instance.spawnPos = pos;
+            instance.spawnYaw = yaw;
             server.getPlayerList().broadcastAll(new ClientboundRotateHeadPacket(instance, (byte) (instance.yHeadRot * 256 / 360)), dimensionId);//instance.dimension);
             server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(instance), dimensionId);//instance.dimension);
             //instance.world.getChunkManager(). updatePosition(instance);
@@ -173,18 +184,19 @@ public class EntityPlayerMPFake extends ServerPlayer
 
         if (reason.getContents() instanceof TranslatableContents text && text.getKey().equals("multiplayer.disconnect.duplicate_login")) {
             this.connection.onDisconnect(new DisconnectionDetails(reason));
-        } else {
-            this.server.schedule(new TickTask(this.server.getTickCount(), () -> {
-                this.connection.onDisconnect(new DisconnectionDetails(reason));
-            }));
         }
     }
 
-    @Override
-    public void tick()
+    public void fakePlayerDisconnect(Component reason)
     {
-        if (this.getServer().getTickCount() % 10 == 0)
-        {
+        this.server.schedule(new TickTask(this.server.getTickCount(), () -> {
+            this.connection.onDisconnect(new DisconnectionDetails(reason));
+        }));
+    }
+
+    @Override
+    public void tick() {
+        if (this.getServer().getTickCount() % 10 == 0) {
             this.connection.resetPosition();
             this.serverLevel().getChunkSource().move(this);
         }
@@ -212,14 +224,17 @@ public class EntityPlayerMPFake extends ServerPlayer
     }
 
     @Override
-    public void die(DamageSource cause)
-    {
+    public void die(DamageSource cause) {
         shakeOff();
         super.die(cause);
-        setHealth(20);
+        kill(this.getCombatTracker().getDeathMessage());
+        this.executor.schedule(this::respawn, 1L, TimeUnit.MILLISECONDS);
+        this.setHealth(20);
         this.foodData = new FoodData();
         giveExperienceLevels(-(experienceLevel + 1));
         kill(this.getCombatTracker().getDeathMessage());
+        this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
+        this.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -239,8 +254,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     }
 
     @Override
-    public ServerPlayer teleport(TeleportTransition serverLevel)
-    {
+    public ServerPlayer teleport(TeleportTransition serverLevel) {
         super.teleport(serverLevel);
         if (wonGame) {
             ServerboundClientCommandPacket p = new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN);
@@ -263,12 +277,7 @@ public class EntityPlayerMPFake extends ServerPlayer
             if (damageSource.getDirectEntity() instanceof LivingEntity le && le.canDisableShield()) {
                 this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
                 this.disableShield();
-
-                String ign = this.getGameProfile().getName();
-                CommandSourceStack commandSource = server.createCommandSourceStack().withSuppressedOutput();
-                ParseResults<CommandSourceStack> parseResults = server.getCommands().getDispatcher()
-                        .parse(String.format("function practicebot:shielddisable", ign), commandSource);
-                server.getCommands().performCommand(parseResults, "");
+                this.invulnerableTime = 20;
             } else {
                 // shield block sound probably
                 this.playSound(SoundEvents.SHIELD_BLOCK, 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);

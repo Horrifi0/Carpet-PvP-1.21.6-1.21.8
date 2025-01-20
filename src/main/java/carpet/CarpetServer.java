@@ -78,6 +78,7 @@ public class CarpetServer // static for now - easier to handle all around the co
         extensions.forEach(CarpetExtension::onGameStarted);
         //FabricAPIHooks.initialize();
         CarpetScriptServer.parseFunctionClasses();
+        CarpetSettings.LOG.info("CARPET PVP LOADED");
     }
 
     public static void onServerLoaded(MinecraftServer server)
