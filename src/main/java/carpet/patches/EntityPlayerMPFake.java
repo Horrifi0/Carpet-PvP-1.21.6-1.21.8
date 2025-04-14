@@ -160,6 +160,11 @@ public class EntityPlayerMPFake extends ServerPlayer
         return new EntityPlayerMPFake(server, level, profile, cli, false);
     }
 
+    public static boolean isSpawningPlayer(String username)
+    {
+        return spawning.contains(username);
+    }
+
     private EntityPlayerMPFake(MinecraftServer server, ServerLevel worldIn, GameProfile profile, ClientInformation cli, boolean shadow)
     {
         super(server, worldIn, profile, cli);
@@ -210,6 +215,8 @@ public class EntityPlayerMPFake extends ServerPlayer
             // happens with that paper port thingy - not sure what that would fix, but hey
             // the game not gonna crash violently.
         }
+
+
     }
 
     private void shakeOff()
@@ -281,32 +288,30 @@ public class EntityPlayerMPFake extends ServerPlayer
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float f) {
-        if (f > 0.0f && this.isDamageSourceBlocked(damageSource)) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float f) {
+        if(f > 0.0f && this.isDamageSourceBlocked(source)){
             this.hurtCurrentlyUsedShield(f);
-            // equivalent of Player::blockUsingShield without wonky KB
-            if (damageSource.getDirectEntity() instanceof LivingEntity le && le.canDisableShield()) {
+            ItemStack stack = this.getUseItem();
+            if(source.getEntity() instanceof LivingEntity le && le.canDisableShield()){
                 this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
-                this.disableShield();
+                this.disableShield(stack);
                 if(!CarpetSettings.shieldStunning) {
                     this.invulnerableTime = 20;
                 }
                 String ign = this.getGameProfile().getName();
                 CommandSourceStack commandSource = server.createCommandSourceStack().withSuppressedOutput();
-                ParseResults<CommandSourceStack> parseResults = server.getCommands().getDispatcher()
-                        .parse(String.format("function practicebot:shielddisable", ign), commandSource);
+                ParseResults<CommandSourceStack> parseResults
+                        = server.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable", ign), commandSource);
                 server.getCommands().performCommand(parseResults, "");
             } else {
-                // shield block sound probably
                 this.playSound(SoundEvents.SHIELD_BLOCK, 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
             }
-            // some stat tracking from LivingEntity::hurt
-            CriteriaTriggers.ENTITY_HURT_PLAYER.trigger((ServerPlayer)this, damageSource, f, 0, true);
-            if (f < 3.4028235E37F) {
+            CriteriaTriggers.ENTITY_HURT_PLAYER.trigger((ServerPlayer)this, source, f, 0, true);
+            if(f < 3.4028235E37F){
                 ((ServerPlayer)this).awardStat(Stats.DAMAGE_BLOCKED_BY_SHIELD, Math.round(f * 10.0F));
             }
             return false;
         }
-        return super.hurt(damageSource, f);
+        return super.hurtServer(serverLevel, source, f);
     }
 }
