@@ -290,12 +290,12 @@ public class EntityPlayerMPFake extends ServerPlayer
 
     @Override
     public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float f) {
-        if(f > 0.0f && this.isDamageSourceBlocked(source)){
-            this.hurtCurrentlyUsedShield(f);
+        if(f > 0.0f && this.(source);){
+            this.applyItemBlocking(serverLevel, source, f);
             ItemStack stack = this.getUseItem();
             if(source.getEntity() instanceof LivingEntity le && le.canDisableShield()){
                 this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
-                this.disableShield(stack);
+                this.block(stack);
                 if(!CarpetSettings.shieldStunning) {
                     this.invulnerableTime = 20;
                 }
