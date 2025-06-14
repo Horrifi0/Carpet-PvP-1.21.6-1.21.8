@@ -1,7 +1,6 @@
 package carpet;
 
 import carpet.api.settings.CarpetRule;
-import carpet.api.settings.RuleCategory;
 import carpet.api.settings.Validators;
 import carpet.api.settings.Validator;
 import carpet.script.utils.AppStoreManager;
@@ -152,7 +151,7 @@ public class CarpetSettings
     @Rule(desc = "Gbhs sgnf sadsgras fhskdpri!!!", category = EXPERIMENTAL)
     public static boolean superSecretSetting = false;
 
-    @Rule(desc = "Dropping entire stacks works also from on the crafting UI result slot", category = {RuleCategory.BUGFIX, SURVIVAL})
+    @Rule(desc = "Dropping entire stacks works also from on the crafting UI result slot", category = {BUGFIX, SURVIVAL})
     public static boolean ctrlQCraftingFix = false;
 
     @Rule(desc = "Parrots don't get of your shoulders until you receive proper damage", category = {SURVIVAL, FEATURE})
@@ -798,7 +797,7 @@ public class CarpetSettings
     )
     public static boolean renewableDeepslate = false;
 
-    @Rule(desc = "fixes block placement rotation issue when player rotates quickly while placing blocks", category = RuleCategory.BUGFIX)
+    @Rule(desc = "fixes block placement rotation issue when player rotates quickly while placing blocks", category = BUGFIX)
     public static boolean placementRotationFix = false;
 
     @Rule(desc = "Spawning requires much less CPU and Memory", category = OPTIMIZATION)

@@ -14,7 +14,6 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
-import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -42,7 +41,6 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import carpet.fakes.ServerPlayerInterface;
 import carpet.utils.Messenger;
-import carpet.helpers.EntityPlayerActionPack;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -227,20 +225,18 @@ public class EntityPlayerMPFake extends ServerPlayer
         {
             if (passenger instanceof Player) passenger.stopRiding();
         }
-    }
-
-    @Override
+    }    @Override
     public void die(DamageSource cause) {
         shakeOff();
         super.die(cause);
         kill(this.getCombatTracker().getDeathMessage());
-        this.executor.schedule(this::respawn, 1L, TimeUnit.MILLISECONDS);
+        EntityPlayerMPFake.executor.schedule(this::respawn, 1L, TimeUnit.MILLISECONDS);
         this.setHealth(20);
         this.foodData = new FoodData();
         giveExperienceLevels(-(experienceLevel + 1));
         kill(this.getCombatTracker().getDeathMessage());
         this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
-        this.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
+        EntityPlayerMPFake.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
     }
 
 //    public void respawn()
@@ -270,9 +266,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     @Override
     protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
         doCheckFallDamage(0.0, y, 0.0, onGround);
-    }
-
-    @Override
+    }    @Override
     public ServerPlayer teleport(TeleportTransition serverLevel) {
         super.teleport(serverLevel);
         if (wonGame) {
@@ -286,16 +280,18 @@ public class EntityPlayerMPFake extends ServerPlayer
             connection.player.hasChangedDimension();
         }
         return connection.player;
-    }
-
-    @Override
+    }    @Override
     public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float f) {
-        if(f > 0.0f && this.(source);){
+        if(f > 0.0f && this.isBlocking()){
             this.applyItemBlocking(serverLevel, source, f);
             ItemStack stack = this.getUseItem();
-            if(source.getEntity() instanceof LivingEntity le && le.canDisableShield()){
-                this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
-                this.block(stack);
+            // Check if this is an attack that can disable shields (axes can disable shields)
+            boolean canDisable = source.getEntity() instanceof LivingEntity le && 
+                                le.getMainHandItem().getItem().toString().contains("axe");
+            if(canDisable){
+                this.playSound(SoundEvents.SHIELD_BREAK.value(), 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
+                this.stopUsingItem();
+                this.getCooldowns().addCooldown(stack, 100);
                 if(!CarpetSettings.shieldStunning) {
                     this.invulnerableTime = 20;
                 }
@@ -305,7 +301,7 @@ public class EntityPlayerMPFake extends ServerPlayer
                         = server.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable", ign), commandSource);
                 server.getCommands().performCommand(parseResults, "");
             } else {
-                this.playSound(SoundEvents.SHIELD_BLOCK, 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
+                this.playSound(SoundEvents.SHIELD_BLOCK.value(), 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
             }
             CriteriaTriggers.ENTITY_HURT_PLAYER.trigger((ServerPlayer)this, source, f, 0, true);
             if(f < 3.4028235E37F){

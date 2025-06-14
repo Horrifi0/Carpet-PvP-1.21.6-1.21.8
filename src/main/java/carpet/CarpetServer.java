@@ -22,7 +22,7 @@ import carpet.network.ServerNetworkHandler;
 import carpet.helpers.HopperCounter;
 import carpet.logging.LoggerRegistry;
 import carpet.script.CarpetScriptServer;
-import carpet.api.settings.SettingsManager;
+import carpet.settings.SettingsManager;
 import carpet.logging.HUDController;
 import carpet.script.external.Carpet;
 import carpet.script.external.Vanilla;
@@ -46,7 +46,7 @@ public class CarpetServer // static for now - easier to handle all around the co
 {
     public static MinecraftServer minecraft_server;
     public static CarpetScriptServer scriptServer;
-    public static carpet.settings.SettingsManager settingsManager; // to change type to api type, can't change right now because of binary and source compat
+    public static SettingsManager settingsManager;
     public static final List<CarpetExtension> extensions = new ArrayList<>();
 
     /**
@@ -66,14 +66,12 @@ public class CarpetServer // static for now - easier to handle all around the co
                     Extension '%s' is registering itself using a mixin into Carpet instead of a regular ModInitializer!
                     This is stupid and will crash the game in future versions!""".formatted(extension.getClass().getSimpleName()));
         }
-    }
-
-    // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
+    }    // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
     // Gets called by Fabric Loader from a ServerModInitializer and a ClientModInitializer, in both to allow extensions 
     // to register before this call in a ModInitializer (declared in fabric.mod.json)
     public static void onGameStarted()
     {
-        settingsManager = new carpet.settings.SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
+        settingsManager = new SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
         settingsManager.parseSettingsClass(CarpetSettings.class);
         extensions.forEach(CarpetExtension::onGameStarted);
         //FabricAPIHooks.initialize();
@@ -101,7 +99,7 @@ public class CarpetServer // static for now - easier to handle all around the co
         HopperCounter.resetAll(minecraftServer, true);
         extensions.forEach(e -> e.onServerLoadedWorlds(minecraftServer));
         // initialize scarpet rules after all extensions are loaded
-        forEachManager(SettingsManager::initializeScarpetRules);
+        forEachManager(sm -> sm.initializeScarpetRules());
         scriptServer.initializeForWorld();
     }
 
@@ -199,17 +197,15 @@ public class CarpetServer // static for now - easier to handle all around the co
     }
     public static void onServerDoneClosing(MinecraftServer server)
     {
-        forEachManager(SettingsManager::detachServer);
-    }
-
-    // not API
+        forEachManager(sm -> sm.detachServer());
+    }    // not API
     // carpet's included
-    public static void forEachManager(Consumer<SettingsManager> consumer)
+    public static void forEachManager(Consumer<carpet.api.settings.SettingsManager> consumer)
     {
         consumer.accept(settingsManager);
         for (CarpetExtension e : extensions)
         {
-            SettingsManager manager = e.extensionSettingsManager();
+            carpet.api.settings.SettingsManager manager = e.extensionSettingsManager();
             if (manager != null)
             {
                 consumer.accept(manager);
