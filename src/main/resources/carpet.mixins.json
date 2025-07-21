@@ -7,6 +7,7 @@
     "SpawnState_scarpetMixin",
     "MobCategory_spawnMixin",
     "Commands_customCommandsMixin",
+    "Commands_giveCommandMixin",
     "ServerGamePacketListenerImplMixin",
 
     "PerfCommand_permissionMixin",

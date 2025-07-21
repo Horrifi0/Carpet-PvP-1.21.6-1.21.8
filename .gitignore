@@ -34,3 +34,6 @@ bin/
 
 run/
 logs/
+
+# documentation (keep local only)
+WIKI.md

@@ -8,6 +8,10 @@ import carpet.fakes.ServerPlayerInterface;
 import carpet.patches.EntityPlayerMPFake;
 import carpet.utils.CommandHelper;
 import carpet.utils.Messenger;
+import carpet.utils.EquipmentSlotMapping;
+import carpet.utils.ArmorSetDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
@@ -23,6 +27,8 @@ import net.minecraft.commands.arguments.DimensionArgument;
 import net.minecraft.commands.arguments.GameModeArgument;
 import net.minecraft.commands.arguments.coordinates.RotationArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.commands.arguments.item.ItemArgument;
+import net.minecraft.commands.arguments.item.ItemInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
@@ -31,6 +37,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec2;
@@ -38,6 +46,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -47,6 +56,8 @@ import static net.minecraft.commands.SharedSuggestionProvider.suggest;
 
 public class PlayerCommand
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PlayerCommand.class);
+    
     // TODO: allow any order like execute
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
@@ -72,6 +83,12 @@ public class PlayerCommand
                         .then(literal("mount").executes(manipulation(ap -> ap.mount(true)))
                                 .then(literal("anything").executes(manipulation(ap -> ap.mount(false)))))
                         .then(literal("dismount").executes(manipulation(EntityPlayerActionPack::dismount)))
+                        .then(makeEquipmentCommands(commandBuildContext))
+                        .then(literal("unequip")
+                                .then(argument("slot", StringArgumentType.word())
+                                        .suggests((c, b) -> suggest(List.of("head", "helmet", "chest", "chestplate", "legs", "leggings", "feet", "boots", "mainhand", "weapon", "offhand", "shield"), b))
+                                        .executes(PlayerCommand::unequipItem)))
+                        .then(literal("equipment").executes(PlayerCommand::showEquipment))
                         .then(literal("sneak").executes(manipulation(ap -> ap.setSneaking(true))))
                         .then(literal("unsneak").executes(manipulation(ap -> ap.setSneaking(false))))
                         .then(literal("sprint").executes(manipulation(ap -> ap.setSprinting(true))))
@@ -361,5 +378,270 @@ public class PlayerCommand
 
         EntityPlayerMPFake.createShadow(player.server, player);
         return 1;
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> makeEquipmentCommands(CommandBuildContext commandBuildContext)
+    {
+        return literal("equip")
+                // /player <name> equip <armor_type> - equip full armor set
+                .then(argument("armor_type", StringArgumentType.word())
+                        .suggests((c, b) -> suggest(ArmorSetDefinition.ARMOR_SETS.keySet(), b))
+                        .executes(PlayerCommand::equipArmorSet))
+                // /player <name> equip <slot> <item> - equip specific item in slot
+                .then(argument("slot", StringArgumentType.word())
+                        .suggests((c, b) -> suggest(List.of("head", "helmet", "chest", "chestplate", "legs", "leggings", "feet", "boots", "mainhand", "weapon", "offhand", "shield"), b))
+                        .then(argument("item", ItemArgument.item(commandBuildContext))
+                                .executes(PlayerCommand::equipItem)));
+    }
+
+    private static int equipArmorSet(CommandContext<CommandSourceStack> context)
+    {
+        if (cantManipulate(context)) return 0;
+
+        ServerPlayer player = getPlayer(context);
+        String armorType = StringArgumentType.getString(context, "armor_type");
+        CommandSourceStack source = context.getSource();
+
+        // Enhanced parameter validation
+        if (armorType == null || armorType.trim().isEmpty()) {
+            Messenger.m(source, "r Armor type cannot be empty");
+            Messenger.m(source, "r Usage: /player <name> equip <armor_type>");
+            Messenger.m(source, "r Available armor types: " + String.join(", ", ArmorSetDefinition.ARMOR_SETS.keySet()));
+            LOGGER.warn("Empty armor type provided for player {} by {}", player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        ArmorSetDefinition armorSet = ArmorSetDefinition.getArmorSet(armorType);
+        if (armorSet == null)
+        {
+            Messenger.m(source, "r Unknown armor type: '" + armorType + "'");
+            Messenger.m(source, "r Usage: /player <name> equip <armor_type>");
+            Messenger.m(source, "r Available armor types: " + String.join(", ", ArmorSetDefinition.ARMOR_SETS.keySet()));
+            Messenger.m(source, "r Example: /player Steve equip diamond");
+            LOGGER.warn("Invalid armor type '{}' requested for player {} by {}", armorType, player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        LOGGER.debug("Equipping {} armor set on player {}", armorType, player.getName().getString());
+        
+        int equipped = 0;
+        int failed = 0;
+        for (Map.Entry<EquipmentSlot, String> entry : armorSet.getPieces().entrySet())
+        {
+            try
+            {
+                net.minecraft.world.item.Item item = source.getServer().registryAccess()
+                    .lookupOrThrow(net.minecraft.core.registries.Registries.ITEM)
+                    .get(net.minecraft.resources.ResourceLocation.parse(entry.getValue()))
+                    .map(net.minecraft.core.Holder::value)
+                    .orElse(null);
+                
+                if (item != null)
+                {
+                    ItemStack itemStack = new ItemStack(item);
+                    player.setItemSlot(entry.getKey(), itemStack);
+                    equipped++;
+                    LOGGER.debug("Successfully equipped {} in {} slot for player {}", entry.getValue(), entry.getKey().getName(), player.getName().getString());
+                }
+                else
+                {
+                    Messenger.m(source, "r Item not found in registry: " + entry.getValue());
+                    LOGGER.error("Item '{}' not found in registry for armor set '{}' on player {}", entry.getValue(), armorType, player.getName().getString());
+                    failed++;
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.m(source, "r Failed to equip " + entry.getValue() + " in " + entry.getKey().getName() + " slot");
+                Messenger.m(source, "r Error: " + e.getMessage());
+                LOGGER.error("Failed to equip {} in {} slot for player {}: {}", entry.getValue(), entry.getKey().getName(), player.getName().getString(), e.getMessage(), e);
+                failed++;
+            }
+        }
+
+        if (equipped > 0)
+        {
+            Messenger.m(source, "g Successfully equipped " + equipped + " pieces of " + armorType + " armor on " + player.getName().getString());
+            if (failed > 0) {
+                Messenger.m(source, "y Warning: " + failed + " pieces failed to equip");
+            }
+            LOGGER.info("Equipped {} pieces of {} armor on player {} (requested by {})", equipped, armorType, player.getName().getString(), source.getTextName());
+        }
+        else if (failed > 0)
+        {
+            Messenger.m(source, "r Failed to equip any armor pieces. Check server logs for details.");
+            LOGGER.error("Failed to equip any pieces of {} armor on player {}", armorType, player.getName().getString());
+        }
+        
+        return equipped > 0 ? 1 : 0;
+    }
+
+    private static int equipItem(CommandContext<CommandSourceStack> context)
+    {
+        if (cantManipulate(context)) return 0;
+
+        ServerPlayer player = getPlayer(context);
+        String slotName = StringArgumentType.getString(context, "slot");
+        CommandSourceStack source = context.getSource();
+
+        // Enhanced parameter validation
+        if (slotName == null || slotName.trim().isEmpty()) {
+            Messenger.m(source, "r Equipment slot cannot be empty");
+            Messenger.m(source, "r Usage: /player <name> equip <slot> <item>");
+            Messenger.m(source, "r Valid slots: head, helmet, chest, chestplate, legs, leggings, feet, boots, mainhand, weapon, offhand, shield");
+            Messenger.m(source, "r Example: /player Steve equip head diamond_helmet");
+            LOGGER.warn("Empty slot name provided for player {} by {}", player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        EquipmentSlot slot = EquipmentSlotMapping.fromString(slotName);
+        if (slot == null)
+        {
+            Messenger.m(source, "r Invalid equipment slot: '" + slotName + "'");
+            Messenger.m(source, "r Usage: /player <name> equip <slot> <item>");
+            Messenger.m(source, "r Valid slots: head, helmet, chest, chestplate, legs, leggings, feet, boots, mainhand, weapon, offhand, shield");
+            Messenger.m(source, "r Example: /player Steve equip head diamond_helmet");
+            LOGGER.warn("Invalid slot name '{}' provided for player {} by {}", slotName, player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        try
+        {
+            ItemInput itemInput = ItemArgument.getItem(context, "item");
+            ItemStack itemStack = itemInput.createItemStack(1, false);
+            
+            // Validate that the item was created successfully
+            if (itemStack.isEmpty()) {
+                Messenger.m(source, "r Failed to create item stack - item may not exist");
+                Messenger.m(source, "r Usage: /player <name> equip <slot> <item>");
+                Messenger.m(source, "r Example: /player Steve equip head diamond_helmet");
+                LOGGER.warn("Empty item stack created for player {} in slot {} by {}", player.getName().getString(), slotName, source.getTextName());
+                return 0;
+            }
+            
+            // Store previous item for logging
+            ItemStack previousItem = player.getItemBySlot(slot);
+            String previousItemName = previousItem.isEmpty() ? "empty" : previousItem.getDisplayName().getString();
+            
+            player.setItemSlot(slot, itemStack);
+            
+            Messenger.m(source, "g Successfully equipped " + itemStack.getDisplayName().getString() + " in " + slot.getName() + " slot for " + player.getName().getString());
+            if (!previousItem.isEmpty()) {
+                Messenger.m(source, "w Replaced previous item: " + previousItemName);
+            }
+            
+            LOGGER.info("Equipped {} in {} slot for player {} (replaced: {}) (requested by {})", 
+                itemStack.getDisplayName().getString(), slot.getName(), player.getName().getString(), previousItemName, source.getTextName());
+            return 1;
+        }
+        catch (Exception e)
+        {
+            Messenger.m(source, "r Failed to equip item in " + slot.getName() + " slot");
+            Messenger.m(source, "r Error: " + e.getMessage());
+            Messenger.m(source, "r Usage: /player <name> equip <slot> <item>");
+            Messenger.m(source, "r Example: /player Steve equip head diamond_helmet");
+            LOGGER.error("Failed to equip item in {} slot for player {} (requested by {}): {}", slot.getName(), player.getName().getString(), source.getTextName(), e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    private static int unequipItem(CommandContext<CommandSourceStack> context)
+    {
+        if (cantManipulate(context)) return 0;
+
+        ServerPlayer player = getPlayer(context);
+        String slotName = StringArgumentType.getString(context, "slot");
+        CommandSourceStack source = context.getSource();
+
+        // Enhanced parameter validation
+        if (slotName == null || slotName.trim().isEmpty()) {
+            Messenger.m(source, "r Equipment slot cannot be empty");
+            Messenger.m(source, "r Usage: /player <name> unequip <slot>");
+            Messenger.m(source, "r Valid slots: head, helmet, chest, chestplate, legs, leggings, feet, boots, mainhand, weapon, offhand, shield");
+            Messenger.m(source, "r Example: /player Steve unequip head");
+            LOGGER.warn("Empty slot name provided for unequip on player {} by {}", player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        EquipmentSlot slot = EquipmentSlotMapping.fromString(slotName);
+        if (slot == null)
+        {
+            Messenger.m(source, "r Invalid equipment slot: '" + slotName + "'");
+            Messenger.m(source, "r Usage: /player <name> unequip <slot>");
+            Messenger.m(source, "r Valid slots: head, helmet, chest, chestplate, legs, leggings, feet, boots, mainhand, weapon, offhand, shield");
+            Messenger.m(source, "r Example: /player Steve unequip head");
+            LOGGER.warn("Invalid slot name '{}' provided for unequip on player {} by {}", slotName, player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        ItemStack currentItem = player.getItemBySlot(slot);
+        if (currentItem.isEmpty())
+        {
+            Messenger.m(source, "r No item equipped in " + slot.getName() + " slot for " + player.getName().getString());
+            Messenger.m(source, "r Use '/player " + player.getName().getString() + " equipment' to see current equipment");
+            LOGGER.debug("Attempted to unequip from empty {} slot on player {} by {}", slot.getName(), player.getName().getString(), source.getTextName());
+            return 0;
+        }
+
+        try {
+            String removedItemName = currentItem.getDisplayName().getString();
+            player.setItemSlot(slot, ItemStack.EMPTY);
+            
+            Messenger.m(source, "g Successfully removed " + removedItemName + " from " + slot.getName() + " slot for " + player.getName().getString());
+            LOGGER.info("Unequipped {} from {} slot for player {} (requested by {})", removedItemName, slot.getName(), player.getName().getString(), source.getTextName());
+            return 1;
+        } catch (Exception e) {
+            Messenger.m(source, "r Failed to unequip item from " + slot.getName() + " slot");
+            Messenger.m(source, "r Error: " + e.getMessage());
+            LOGGER.error("Failed to unequip item from {} slot for player {} (requested by {}): {}", slot.getName(), player.getName().getString(), source.getTextName(), e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    private static int showEquipment(CommandContext<CommandSourceStack> context)
+    {
+        if (cantManipulate(context)) return 0;
+
+        ServerPlayer player = getPlayer(context);
+        CommandSourceStack source = context.getSource();
+
+        try {
+            Messenger.m(source, "g Equipment for " + player.getName().getString() + ":");
+            
+            int equippedCount = 0;
+            for (EquipmentSlot slot : EquipmentSlot.values())
+            {
+                ItemStack item = player.getItemBySlot(slot);
+                if (item.isEmpty()) {
+                    Messenger.m(source, "w " + slot.getName() + ": Empty");
+                } else {
+                    String itemName = item.getDisplayName().getString();
+                    String durabilityInfo = "";
+                    if (item.isDamageableItem()) {
+                        int durability = item.getMaxDamage() - item.getDamageValue();
+                        int maxDurability = item.getMaxDamage();
+                        durabilityInfo = String.format(" (Durability: %d/%d)", durability, maxDurability);
+                    }
+                    Messenger.m(source, "w " + slot.getName() + ": " + itemName + durabilityInfo);
+                    equippedCount++;
+                }
+            }
+            
+            if (equippedCount == 0) {
+                Messenger.m(source, "y No equipment currently equipped");
+                Messenger.m(source, "w Use '/player " + player.getName().getString() + " equip <armor_type>' to equip a full armor set");
+                Messenger.m(source, "w Use '/player " + player.getName().getString() + " equip <slot> <item>' to equip individual items");
+            } else {
+                Messenger.m(source, "g Total equipped items: " + equippedCount);
+            }
+            
+            LOGGER.debug("Displayed equipment for player {} (requested by {})", player.getName().getString(), source.getTextName());
+            return 1;
+        } catch (Exception e) {
+            Messenger.m(source, "r Failed to display equipment information");
+            Messenger.m(source, "r Error: " + e.getMessage());
+            LOGGER.error("Failed to display equipment for player {} (requested by {}): {}", player.getName().getString(), source.getTextName(), e.getMessage(), e);
+            return 0;
+        }
     }
 }
