@@ -732,6 +732,10 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         }
     }
 
+
+
+
+
     private static final Map<String, NbtPathArgument.NbtPath> pathCache = new HashMap<>();
 
     private static NbtPathArgument.NbtPath cachePath(String arg)

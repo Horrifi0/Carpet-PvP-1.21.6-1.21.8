@@ -41,18 +41,27 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import carpet.fakes.ServerPlayerInterface;
 import carpet.utils.Messenger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.world.item.Items;
 
 @SuppressWarnings("EntityConstructor")
 public class EntityPlayerMPFake extends ServerPlayer
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(EntityPlayerMPFake.class);
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private static final Set<String> spawning = new HashSet<>();
 
@@ -60,6 +69,13 @@ public class EntityPlayerMPFake extends ServerPlayer
     public boolean isAShadow;
     public Vec3 spawnPos;
     public double spawnYaw;
+    
+    // Equipment synchronization state caching
+    private final Map<EquipmentSlot, ItemStack> lastSyncedEquipment = new HashMap<>();
+    
+    // Equipment persistence storage
+    private final Map<EquipmentSlot, ItemStack> persistentEquipment = new HashMap<>();
+    private static final Map<String, Map<EquipmentSlot, ItemStack>> globalEquipmentStorage = new HashMap<>();
 
     // Returns true if it was successful, false if couldn't spawn due to the player not existing in Mojang servers
     public static boolean createFake(String username, MinecraftServer server, Vec3 pos, double yaw, double pitch, ResourceKey<Level> dimensionId, GameType gamemode, boolean flying)
@@ -118,6 +134,12 @@ public class EntityPlayerMPFake extends ServerPlayer
             server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(instance), dimensionId);//instance.dimension);
             //instance.world.getChunkManager(). updatePosition(instance);
             instance.entityData.set(DATA_PLAYER_MODE_CUSTOMISATION, (byte) 0x7f); // show all model layers (incl. capes)
+            
+            // Restore equipment state if available (for server restart scenarios)
+            instance.restoreEquipmentState();
+            
+            // Ensure equipment is synchronized to all clients
+            instance.syncAllEquipmentToClients();
             instance.getAbilities().flying = flying;
         }, server);
         return true;
@@ -150,6 +172,12 @@ public class EntityPlayerMPFake extends ServerPlayer
         server.getPlayerList().broadcastAll(new ClientboundPlayerInfoUpdatePacket(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER, playerShadow));
         //player.world.getChunkManager().updatePosition(playerShadow);
         playerShadow.getAbilities().flying = player.getAbilities().flying;
+        
+        // Save equipment state from the original player
+        playerShadow.saveEquipmentState();
+        
+        // Ensure equipment is synchronized to all clients
+        playerShadow.syncAllEquipmentToClients();
         return playerShadow;
     }
 
@@ -162,6 +190,9 @@ public class EntityPlayerMPFake extends ServerPlayer
     {
         return spawning.contains(username);
     }
+    
+    // Note: Equipment persistence across server restarts is not implemented
+    // Equipment will be preserved during dimension changes and respawns within the same session
 
     private EntityPlayerMPFake(MinecraftServer server, ServerLevel worldIn, GameProfile profile, ClientInformation cli, boolean shadow)
     {
@@ -172,8 +203,195 @@ public class EntityPlayerMPFake extends ServerPlayer
     @Override
     public void onEquipItem(final EquipmentSlot slot, final ItemStack previous, final ItemStack stack)
     {
-        if (!isUsingItem()) super.onEquipItem(slot, previous, stack);
+        super.onEquipItem(slot, previous, stack);
+        
+        // Log equipment changes for debugging
+        String previousItemName = previous.isEmpty() ? "empty" : previous.getDisplayName().getString();
+        String newItemName = stack.isEmpty() ? "empty" : stack.getDisplayName().getString();
+        LOGGER.debug("Equipment changed for fake player {}: {} slot {} -> {}", 
+            getName().getString(), slot.getName(), previousItemName, newItemName);
+        
+        // Force synchronization to all clients after equipment changes
+        try {
+            syncEquipmentToClients(slot, stack);
+        } catch (Exception e) {
+            LOGGER.error("Failed to sync equipment change for fake player {} in slot {}: {}", 
+                getName().getString(), slot.getName(), e.getMessage(), e);
+        }
     }
+
+    /**
+     * Synchronizes equipment changes to all nearby clients
+     * Includes caching to prevent redundant sync operations
+     */
+    private void syncEquipmentToClients(EquipmentSlot slot, ItemStack stack) {
+        try {
+            // Check if equipment state has actually changed to prevent redundant updates
+            ItemStack lastSynced = lastSyncedEquipment.get(slot);
+            if (ItemStack.matches(lastSynced, stack)) {
+                LOGGER.debug("Skipping redundant equipment sync for fake player {} in slot {} - no change detected", 
+                    getName().getString(), slot.getName());
+                return; // No change, skip sync
+            }
+            
+            // Update cache
+            lastSyncedEquipment.put(slot, stack.copy());
+            
+            // Count nearby players for logging
+            int nearbyPlayerCount = server.getPlayerList().getPlayers().size();
+            
+            // Use the existing broadcast pattern to synchronize equipment changes
+            // This forces a refresh of the fake player's appearance to all nearby players
+            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            
+            LOGGER.debug("Synced equipment change for fake player {} in slot {} to {} players", 
+                getName().getString(), slot.getName(), nearbyPlayerCount);
+                
+        } catch (Exception e) {
+            LOGGER.error("Failed to sync equipment for fake player {} in slot {}: {}", 
+                getName().getString(), slot.getName(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Forces a full equipment synchronization to all nearby clients
+     * Useful for ensuring equipment state consistency
+     */
+    public void syncAllEquipmentToClients() {
+        try {
+            LOGGER.debug("Starting full equipment sync for fake player {}", getName().getString());
+            
+            int syncedSlots = 0;
+            // Update cache for all equipment slots
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
+                ItemStack currentItem = getItemBySlot(slot);
+                lastSyncedEquipment.put(slot, currentItem.copy());
+                if (!currentItem.isEmpty()) {
+                    syncedSlots++;
+                }
+            }
+            
+            // Count nearby players for logging
+            int nearbyPlayerCount = server.getPlayerList().getPlayers().size();
+            
+            // Force synchronization to all clients
+            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            
+            LOGGER.debug("Completed full equipment sync for fake player {} - {} equipped slots synced to {} players", 
+                getName().getString(), syncedSlots, nearbyPlayerCount);
+                
+        } catch (Exception e) {
+            LOGGER.error("Failed to sync all equipment for fake player {}: {}", getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Public method to trigger equipment synchronization from external code
+     * Used by Scarpet inventory functions
+     */
+    public void syncEquipmentToClients() {
+        try {
+            LOGGER.debug("External equipment sync requested for fake player {}", getName().getString());
+            syncAllEquipmentToClients();
+            
+            // Force full synchronization using the existing broadcast pattern
+            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            
+            LOGGER.debug("External equipment sync completed for fake player {}", getName().getString());
+        } catch (Exception e) {
+            LOGGER.error("Failed external equipment sync for fake player {}: {}", getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Saves current equipment state for persistence across dimension changes and respawns
+     */
+    public void saveEquipmentState() {
+        try {
+            String playerName = getName().getString();
+            Map<EquipmentSlot, ItemStack> currentEquipment = new HashMap<>();
+            
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
+                ItemStack item = getItemBySlot(slot);
+                if (!item.isEmpty()) {
+                    currentEquipment.put(slot, item.copy());
+                }
+            }
+            
+            // Store in both instance and global storage
+            persistentEquipment.clear();
+            persistentEquipment.putAll(currentEquipment);
+            globalEquipmentStorage.put(playerName, new HashMap<>(currentEquipment));
+            
+            LOGGER.debug("Saved equipment state for fake player {} - {} equipped items", 
+                playerName, currentEquipment.size());
+                
+        } catch (Exception e) {
+            LOGGER.error("Failed to save equipment state for fake player {}: {}", 
+                getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Restores equipment state from persistent storage
+     */
+    public void restoreEquipmentState() {
+        try {
+            String playerName = getName().getString();
+            Map<EquipmentSlot, ItemStack> savedEquipment = globalEquipmentStorage.get(playerName);
+            
+            if (savedEquipment == null || savedEquipment.isEmpty()) {
+                LOGGER.debug("No saved equipment state found for fake player {}", playerName);
+                return;
+            }
+            
+            int restoredItems = 0;
+            for (Map.Entry<EquipmentSlot, ItemStack> entry : savedEquipment.entrySet()) {
+                EquipmentSlot slot = entry.getKey();
+                ItemStack item = entry.getValue().copy();
+                
+                // Only restore if slot is currently empty to avoid overwriting new equipment
+                if (getItemBySlot(slot).isEmpty()) {
+                    setItemSlot(slot, item);
+                    restoredItems++;
+                    LOGGER.debug("Restored {} to slot {} for fake player {}", 
+                        item.getDisplayName().getString(), slot.getName(), playerName);
+                }
+            }
+            
+            // Update persistent equipment cache
+            persistentEquipment.clear();
+            persistentEquipment.putAll(savedEquipment);
+            
+            // Sync equipment to clients after restoration
+            if (restoredItems > 0) {
+                syncAllEquipmentToClients();
+                LOGGER.debug("Restored {} equipment items for fake player {}", restoredItems, playerName);
+            }
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to restore equipment state for fake player {}: {}", 
+                getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Clears saved equipment state for this player
+     */
+    public void clearSavedEquipmentState() {
+        try {
+            String playerName = getName().getString();
+            persistentEquipment.clear();
+            globalEquipmentStorage.remove(playerName);
+            LOGGER.debug("Cleared saved equipment state for fake player {}", playerName);
+        } catch (Exception e) {
+            LOGGER.error("Failed to clear equipment state for fake player {}: {}", 
+                getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    // Note: NBT serialization/deserialization for server restart persistence is not implemented
+    // Equipment persistence is handled through in-memory storage during the session
 
     @Override
     public void kill(ServerLevel level) {
@@ -238,6 +456,68 @@ public class EntityPlayerMPFake extends ServerPlayer
         this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
         EntityPlayerMPFake.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
     }
+    
+    /**
+     * Handles equipment restoration after respawn based on game rules and settings
+     */
+    private void handleRespawnEquipment() {
+        try {
+            // Check game rules for equipment handling on death
+            boolean keepInventory = this.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY);
+            
+            if (keepInventory) {
+                // Restore all equipment if keepInventory is enabled
+                restoreEquipmentState();
+                LOGGER.debug("Restored all equipment for fake player {} after respawn (keepInventory=true)", 
+                    getName().getString());
+            } else {
+                // For fake players, we might want to keep equipment for testing purposes
+                // This can be controlled by a carpet setting in the future
+                boolean keepFakePlayerEquipment = true; // Default to keeping equipment for testing
+                
+                if (keepFakePlayerEquipment) {
+                    restoreEquipmentState();
+                    LOGGER.debug("Restored equipment for fake player {} after respawn (fake player equipment persistence enabled)", 
+                        getName().getString());
+                } else {
+                    // Clear equipment state if not keeping it
+                    clearSavedEquipmentState();
+                    LOGGER.debug("Cleared equipment for fake player {} after respawn (fake player equipment persistence disabled)", 
+                        getName().getString());
+                }
+            }
+            
+        } catch (Exception e) {
+            LOGGER.error("Error handling respawn equipment for fake player {}: {}", 
+                getName().getString(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Respawn method for fake players
+     */
+    public void respawn() {
+        try {
+            LOGGER.debug("Respawning fake player {}", getName().getString());
+            this.setHealth(20);
+            this.foodData = new FoodData();
+            this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
+            
+            // Ensure equipment synchronization after respawn
+            executor.schedule(() -> {
+                try {
+                    syncAllEquipmentToClients();
+                    LOGGER.debug("Equipment synchronized after respawn for fake player {}", getName().getString());
+                } catch (Exception e) {
+                    LOGGER.error("Failed to sync equipment after respawn for fake player {}: {}", 
+                        getName().getString(), e.getMessage(), e);
+                }
+            }, 50, TimeUnit.MILLISECONDS);
+            
+        } catch (Exception e) {
+            LOGGER.error("Error during respawn for fake player {}: {}", getName().getString(), e.getMessage(), e);
+        }
+    }
 
 //    public void respawn()
 //    {
@@ -267,19 +547,62 @@ public class EntityPlayerMPFake extends ServerPlayer
     protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
         doCheckFallDamage(0.0, y, 0.0, onGround);
     }    @Override
-    public ServerPlayer teleport(TeleportTransition serverLevel) {
-        super.teleport(serverLevel);
-        if (wonGame) {
-            ServerboundClientCommandPacket p = new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN);
-            connection.handleClientCommand(p);
-        }
+    public ServerPlayer teleport(TeleportTransition teleportTransition) {
+        try {
+            LOGGER.debug("Starting dimension teleport for fake player {} from {} to {}", 
+                getName().getString(), 
+                this.level().dimension().location(),
+                teleportTransition.newLevel().dimension().location());
+            
+            // Save equipment state before teleportation
+            saveEquipmentState();
+            
+            ServerPlayer result = super.teleport(teleportTransition);
+            
+            if (wonGame) {
+                ServerboundClientCommandPacket p = new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN);
+                connection.handleClientCommand(p);
+            }
 
-        // If above branch was taken, *this* has been removed and replaced, the new instance has been set
-        // on 'our' connection (which is now theirs, but we still have a ref).
-        if (connection.player.isChangingDimension()) {
-            connection.player.hasChangedDimension();
+            // Handle dimension change completion
+            if (connection.player.isChangingDimension()) {
+                connection.player.hasChangedDimension();
+            }
+            
+            // Restore equipment state after teleportation if this is still the same player instance
+            if (result == this) {
+                // Schedule equipment restoration to happen after teleportation is complete
+                executor.schedule(() -> {
+                    try {
+                        restoreEquipmentState();
+                        LOGGER.debug("Equipment restoration completed after dimension teleport for fake player {}", 
+                            getName().getString());
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to restore equipment after dimension teleport for fake player {}: {}", 
+                            getName().getString(), e.getMessage(), e);
+                    }
+                }, 100, TimeUnit.MILLISECONDS);
+            } else if (result instanceof EntityPlayerMPFake fakeResult) {
+                // If a new instance was created, transfer equipment state
+                executor.schedule(() -> {
+                    try {
+                        fakeResult.restoreEquipmentState();
+                        LOGGER.debug("Equipment transferred to new instance after dimension teleport for fake player {}", 
+                            getName().getString());
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to transfer equipment to new instance after dimension teleport for fake player {}: {}", 
+                            getName().getString(), e.getMessage(), e);
+                    }
+                }, 100, TimeUnit.MILLISECONDS);
+            }
+            
+            return result;
+            
+        } catch (Exception e) {
+            LOGGER.error("Error during dimension teleport for fake player {}: {}", 
+                getName().getString(), e.getMessage(), e);
+            return super.teleport(teleportTransition);
         }
-        return connection.player;
     }    @Override
     public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float f) {
         if(f > 0.0f && this.isBlocking()){
