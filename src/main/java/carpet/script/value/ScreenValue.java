@@ -199,7 +199,7 @@ public class ScreenValue extends Value
             this.screenHandler = null;
             return false;
         }
-        int runPermissionLevel = Vanilla.MinecraftServer_getRunPermissionLevel(player.server);
+        int runPermissionLevel = Vanilla.MinecraftServer_getRunPermissionLevel(player.getServer());
         CommandSourceStack source = player.createCommandSourceStack().withPermission(runPermissionLevel);
         CarpetScriptHost executingHost = appHost.retrieveForExecution(source, player);
         try
@@ -391,7 +391,7 @@ public class ScreenValue extends Value
             }
             else
             {
-                nbtList.add(itemStack.save(regs));
+                nbtList.add(ItemStack.CODEC.encodeStart(player.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), itemStack).result().orElse(new CompoundTag()));
             }
         }
         return nbtList;

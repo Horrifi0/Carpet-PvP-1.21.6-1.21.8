@@ -145,7 +145,10 @@ public class Inventories
                     int ingredientIndex = info;
 
                     List<Value> alternatives = new ArrayList<>();
-                    recipe.placementInfo().ingredients().get(ingredientIndex).items().forEach(item -> alternatives.add(ValueConversions.of(item.value(), regs)));
+                    // Fallback to old representative stacks exposed by Ingredient for display purposes
+                    @SuppressWarnings("deprecation")
+                    var _stream = recipe.placementInfo().ingredients().get(ingredientIndex).items();
+                    _stream.forEach(holder -> alternatives.add(ValueConversions.of(holder.value(), regs)));
                     if (alternatives.isEmpty())
                     {
                         ingredientValue.add(Value.NULL);

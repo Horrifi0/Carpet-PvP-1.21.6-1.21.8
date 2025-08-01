@@ -48,6 +48,7 @@ public abstract class Explosion_scarpetEventMixin
         instance.onExplosionHit(entity);
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Inject(method = "explode", locals = LocalCapture.CAPTURE_FAILHARD, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ServerExplosion;hurtEntities()V", shift = At.Shift.AFTER))
     private void onExplosionDone(CallbackInfo ci, List list)
     {

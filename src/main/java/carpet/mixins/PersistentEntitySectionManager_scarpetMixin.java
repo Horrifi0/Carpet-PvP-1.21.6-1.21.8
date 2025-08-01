@@ -33,7 +33,7 @@ public class PersistentEntitySectionManager_scarpetMixin
             CarpetScriptServer.LOG.error("Failed to handle entity type " + entity.getType().getDescriptionId());
         }
 
-        event = CarpetEventServer.Event.ENTITY_LOAD.get(entity.getType());
+        event = CarpetEventServer.Event.ENTITY_HANDLER.get(entity.getType());
         if (event != null)
         {
             if (event.isNeeded())

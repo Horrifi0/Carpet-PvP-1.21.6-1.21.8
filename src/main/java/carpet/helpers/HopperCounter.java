@@ -419,12 +419,17 @@ public class HopperCounter
 
         for (Recipe<?> r : RecipeHelper.getRecipesForOutput(CarpetServer.minecraft_server.getRecipeManager(), id, level))
         {
+            // Fall back to deprecated stream for representative ingredient holders, mapped to items.
             for (Ingredient ingredient : r.placementInfo().ingredients())
             {
-                Optional<Holder<Item>> match = ingredient.items().filter(stack -> fromItem(stack.value(), registryAccess) != null).findFirst();
+                @SuppressWarnings("deprecation")
+                Optional<Item> match = ingredient.items()
+                        .map(holder -> holder.value())
+                        .filter(it -> fromItem(it, registryAccess) != null)
+                        .findFirst();
                 if (match.isPresent())
                 {
-                    return fromItem(match.get().value(), registryAccess);
+                    return fromItem(match.get(), registryAccess);
                 }
             }
         }

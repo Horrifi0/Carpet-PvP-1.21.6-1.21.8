@@ -42,23 +42,17 @@ import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 
-public class CarpetServer // static for now - easier to handle all around the code, its one anyways
+public class CarpetServer
 {
     public static MinecraftServer minecraft_server;
     public static CarpetScriptServer scriptServer;
+    @SuppressWarnings("removal")
     public static SettingsManager settingsManager;
     public static final List<CarpetExtension> extensions = new ArrayList<>();
 
-    /**
-     * Registers a {@link CarpetExtension} to be managed by Carpet.<br>
-     * Should be called before Carpet's startup, like in Fabric Loader's
-     * {@link net.fabricmc.api.ModInitializer} entrypoint
-     * @param extension The instance of a {@link CarpetExtension} to be registered
-     */
     public static void manageExtension(CarpetExtension extension)
     {
         extensions.add(extension);
-        // Stop the stupid practice of extensions mixing into Carpet just to register themselves
         if (StackWalker.getInstance().walk(stream -> stream.skip(1)
                 .anyMatch(el -> el.getClassName() == CarpetServer.class.getName())))
         {
@@ -66,15 +60,19 @@ public class CarpetServer // static for now - easier to handle all around the co
                     Extension '%s' is registering itself using a mixin into Carpet instead of a regular ModInitializer!
                     This is stupid and will crash the game in future versions!""".formatted(extension.getClass().getSimpleName()));
         }
-    }    // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
-    // Gets called by Fabric Loader from a ServerModInitializer and a ClientModInitializer, in both to allow extensions 
-    // to register before this call in a ModInitializer (declared in fabric.mod.json)
+    }
     public static void onGameStarted()
     {
-        settingsManager = new SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
+        if (FabricLoader.getInstance().isModLoaded("worldthreader"))
+        {
+            CarpetSettings.LOG.error("Disabling Carpet PVP: incompatible mod detected (worldthreader)");
+            return;
+        }
+        @SuppressWarnings("removal")
+        SettingsManager mgr = new SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
+        settingsManager = mgr;
         settingsManager.parseSettingsClass(CarpetSettings.class);
         extensions.forEach(CarpetExtension::onGameStarted);
-        //FabricAPIHooks.initialize();
         CarpetScriptServer.parseFunctionClasses();
         CarpetSettings.LOG.info("CARPET PVP LOADED");
     }
@@ -82,7 +80,6 @@ public class CarpetServer // static for now - easier to handle all around the co
     public static void onServerLoaded(MinecraftServer server)
     {
         CarpetServer.minecraft_server = server;
-        // shoudl not be needed - that bit needs refactoring, but not now.
         SpawnReporter.resetSpawnStats(server, true);
 
         forEachManager(sm -> sm.attachServer(server));
@@ -91,14 +88,12 @@ public class CarpetServer // static for now - easier to handle all around the co
         Carpet.MinecraftServer_addScriptServer(server, scriptServer);
         MobAI.resetTrackers();
         LoggerRegistry.initLoggers();
-        //TickSpeed.reset();
     }
 
     public static void onServerLoadedWorlds(MinecraftServer minecraftServer)
     {
         HopperCounter.resetAll(minecraftServer, true);
         extensions.forEach(e -> e.onServerLoadedWorlds(minecraftServer));
-        // initialize scarpet rules after all extensions are loaded
         forEachManager(sm -> sm.initializeScarpetRules());
         scriptServer.initializeForWorld();
     }
@@ -107,16 +102,13 @@ public class CarpetServer // static for now - easier to handle all around the co
     {
         HUDController.update_hud(server, null);
         if (scriptServer != null) scriptServer.tick();
-
-        //in case something happens
         CarpetSettings.impendingFillSkipUpdates.set(false);
-
         extensions.forEach(e -> e.onTick(server));
     }
 
     public static void registerCarpetCommands(CommandDispatcher<CommandSourceStack> dispatcher, Commands.CommandSelection environment, CommandBuildContext commandBuildContext)
     {
-        if (settingsManager == null) // bootstrap dev initialization check
+        if (settingsManager == null)
         {
             return;
         }
@@ -133,8 +125,6 @@ public class CarpetServer // static for now - easier to handle all around the co
         DrawCommand.register(dispatcher, commandBuildContext);
         ScriptCommand.register(dispatcher, commandBuildContext);
         MobAICommand.register(dispatcher, commandBuildContext);
-        // registering command of extensions that has registered before either server is created
-        // for all other, they will have them registered when they add themselves
         extensions.forEach(e -> {
             e.registerCommands(dispatcher, commandBuildContext);
         });
@@ -144,7 +134,6 @@ public class CarpetServer // static for now - easier to handle all around the co
         
         if (FabricLoader.getInstance().isDevelopmentEnvironment())
             TestCommand.register(dispatcher);
-        // todo 1.16 - re-registerer apps if that's a reload operation.
     }
 
     public static void onPlayerLoggedIn(ServerPlayer player)
@@ -160,7 +149,6 @@ public class CarpetServer // static for now - easier to handle all around the co
         ServerNetworkHandler.onPlayerLoggedOut(player);
         LoggerRegistry.playerDisconnected(player);
         extensions.forEach(e -> e.onPlayerLoggedOut(player));
-        // first case client, second case server
         CarpetScriptServer runningScriptServer = (player.getServer() == null) ? scriptServer : Vanilla.MinecraftServer_getScriptServer(player.getServer());
         if (runningScriptServer != null && !runningScriptServer.stopAll) {
             runningScriptServer.onPlayerLoggedOut(player, reason);
@@ -175,12 +163,9 @@ public class CarpetServer // static for now - easier to handle all around the co
 
     public static void onServerClosed(@Nullable MinecraftServer server)
     {
-        // this for whatever reason gets called multiple times even when joining on SP
-        // so we allow to pass multiple times gating it only on existing server ref
         if (minecraft_server != null)
         {
             if (scriptServer != null) scriptServer.onClose();
-            // this is a mess, will cleanip onlly when global reference is gone
             if (server != null && !Vanilla.MinecraftServer_getScriptServer(server).stopAll) {
                 Vanilla.MinecraftServer_getScriptServer(server).onClose();
             }
@@ -198,9 +183,8 @@ public class CarpetServer // static for now - easier to handle all around the co
     public static void onServerDoneClosing(MinecraftServer server)
     {
         forEachManager(sm -> sm.detachServer());
-    }    // not API
-    // carpet's included
-    public static void forEachManager(Consumer<carpet.api.settings.SettingsManager> consumer)
+    }
+    public static void forEachManager(java.util.function.Consumer<carpet.api.settings.SettingsManager> consumer)
     {
         consumer.accept(settingsManager);
         for (CarpetExtension e : extensions)
@@ -233,4 +217,3 @@ public class CarpetServer // static for now - easier to handle all around the co
                     This behaviour will not work in later Carpet versions and the manager won't be registered!""".formatted(ext.getClass().getName()));
     }
 }
-

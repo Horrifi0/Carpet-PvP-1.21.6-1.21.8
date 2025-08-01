@@ -167,8 +167,9 @@ public abstract class LevelChunk_movableBEMixin extends ChunkAccess implements W
             oldBlockEntity = this.getBlockEntity(blockPos_1, LevelChunk.EntityCreationType.CHECK);
             if (oldBlockEntity != null && !oldBlockEntity.isValidBlockState(oldBlockState))
             {
-                oldBlockEntity.setBlockState(oldBlockState);
-                updateBlockEntityTicker(oldBlockEntity);
+                BlockEntity _be = oldBlockEntity;
+                _be.setChanged();
+                updateBlockEntityTicker(_be);
             }
             else
             {
@@ -184,8 +185,9 @@ public abstract class LevelChunk_movableBEMixin extends ChunkAccess implements W
                 {
                     newBlockEntity.clearRemoved();
                     this.level.setBlockEntity(newBlockEntity);
-                    newBlockEntity.setBlockState(newBlockState);
-                    updateBlockEntityTicker(newBlockEntity);
+                    BlockEntity _nbe = newBlockEntity;
+                    _nbe.setChanged();
+                    updateBlockEntityTicker(_nbe);
                 }
             }
         }

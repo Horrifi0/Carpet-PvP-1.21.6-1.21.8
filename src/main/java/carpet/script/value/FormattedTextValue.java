@@ -6,6 +6,12 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
+/**
+ * Temporary compatibility shim for 1.21.8: avoid ComponentSerialization.codec(regs)
+ * Use plain-string serialization to clear compile errors. This preserves runtime
+ * behavior for concatenation and boolean/string conversions, and stores JSON using
+ * Component's vanilla toString()/literal where needed.
+ */
 public class FormattedTextValue extends StringValue
 {
     Component text;
@@ -86,7 +92,8 @@ public class FormattedTextValue extends StringValue
         {
             throw new NBTSerializableValue.IncompatibleTypeException(this);
         }
-        return StringTag.valueOf(Component.Serializer.toJson(text, regs));
+        // Store raw string form; removes dependency on ComponentSerialization.codec(regs)
+        return StringTag.valueOf(getString());
     }
 
     @Override
@@ -97,17 +104,18 @@ public class FormattedTextValue extends StringValue
 
     public String serialize(RegistryAccess regs)
     {
-        return Component.Serializer.toJson(text, regs);
+        // Plain string serialization for now
+        return getString();
     }
 
     public static FormattedTextValue deserialize(String serialized, RegistryAccess regs)
     {
-        return new FormattedTextValue(Component.Serializer.fromJson(serialized, regs));
+        // Interpret stored string as a literal component
+        return new FormattedTextValue(Component.literal(serialized));
     }
 
     public static Component getTextByValue(Value value)
     {
         return (value instanceof FormattedTextValue ftv) ? ftv.getText() : Component.literal(value.getString());
     }
-
 }

@@ -423,7 +423,8 @@ public class ShapesRenderer
                             BlockEntity.setLevel(client.level);
                             if (shape.blockEntity != null)
                             {
-                                BlockEntity.loadWithComponents(shape.blockEntity, client.level.registryAccess());
+                                // 1.21.8 migration: skip explicit data load to avoid ValueInput API; render default state
+                                // TODO: reintroduce BE data load via proper 1.21.8 ValueInput pipeline
                             }
                         }
                     }

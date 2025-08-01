@@ -180,44 +180,41 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
         }
     }
 
-    @Inject(method = "handlePlayerCommand", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setShiftKeyDown(Z)V",
-            ordinal = 0
-    ))
+    // 1.21.8: Command packet phases changed; fire on method HEAD instead of exact INVOKE to avoid missing targets
+    @Inject(method = "handlePlayerCommand", at = @At("HEAD"))
     private void onStartSneaking(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
     {
-        PLAYER_STARTS_SNEAKING.onPlayerEvent(player);
+        String act = clientCommandC2SPacket_1.getAction().name();
+        if ("PRESS_SHIFT_KEY".equals(act) || "START_SNEAKING".equals(act) || "START_SHIFTING".equals(act)) {
+            PLAYER_STARTS_SNEAKING.onPlayerEvent(player);
+        }
     }
 
-    @Inject(method = "handlePlayerCommand", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setShiftKeyDown(Z)V",
-            ordinal = 1
-    ))
+    @Inject(method = "handlePlayerCommand", at = @At("HEAD"))
     private void onStopSneaking(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
     {
-        PLAYER_STOPS_SNEAKING.onPlayerEvent(player);
+        String act = clientCommandC2SPacket_1.getAction().name();
+        if ("RELEASE_SHIFT_KEY".equals(act) || "STOP_SNEAKING".equals(act) || "STOP_SHIFTING".equals(act)) {
+            PLAYER_STOPS_SNEAKING.onPlayerEvent(player);
+        }
     }
 
-    @Inject(method = "handlePlayerCommand", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setSprinting(Z)V",
-            ordinal = 0
-    ))
+    @Inject(method = "handlePlayerCommand", at = @At("HEAD"))
     private void onStartSprinting(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
     {
-        PLAYER_STARTS_SPRINTING.onPlayerEvent(player);
+        String act = clientCommandC2SPacket_1.getAction().name();
+        if ("START_SPRINTING".equals(act)) {
+            PLAYER_STARTS_SPRINTING.onPlayerEvent(player);
+        }
     }
 
-    @Inject(method = "handlePlayerCommand", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setSprinting(Z)V",
-            ordinal = 1
-    ))
+    @Inject(method = "handlePlayerCommand", at = @At("HEAD"))
     private void onStopSprinting(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
     {
-        PLAYER_STOPS_SPRINTING.onPlayerEvent(player);
+        String act = clientCommandC2SPacket_1.getAction().name();
+        if ("STOP_SPRINTING".equals(act)) {
+            PLAYER_STOPS_SPRINTING.onPlayerEvent(player);
+        }
     }
 
     @Inject(method = "handlePlayerCommand", at = @At(
@@ -256,7 +253,7 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
     {
         if (PLAYER_CHOOSES_RECIPE.isNeeded())
         {
-            RecipeManager.ServerDisplayInfo displayInfo = player.server.getRecipeManager().getRecipeFromDisplay(packet.recipe());
+            RecipeManager.ServerDisplayInfo displayInfo = player.getServer().getRecipeManager().getRecipeFromDisplay(packet.recipe());
             if (displayInfo == null) {
                 return;
             }

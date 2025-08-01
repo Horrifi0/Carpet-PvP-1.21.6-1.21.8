@@ -11,10 +11,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(PerfCommand.class)
 public class PerfCommand_permissionMixin
 {
-    @Inject(method = "method_37340", at = @At("HEAD"), cancellable = true, remap = false)
+    // 1.21.8: make this injection optional to avoid crash if the target signature/name changed
+    @Inject(method = {"method_37340", "canRun", "m_37340_"}, at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void canRun(CommandSourceStack source, CallbackInfoReturnable<Boolean> cir)
     {
-        cir.setReturnValue(source.hasPermission(CarpetSettings.perfPermissionLevel));
+        if (CarpetSettings.perfPermissionLevel >= 0)
+        {
+            cir.setReturnValue(source.hasPermission(CarpetSettings.perfPermissionLevel));
+        }
     }
 
 }

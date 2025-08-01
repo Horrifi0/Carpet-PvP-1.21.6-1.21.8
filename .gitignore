@@ -1,28 +1,19 @@
-# gradle
-
+# Gradle
 .gradle/
 build/
-out/
-lout/
 classes/
+out/
+run/
+logs/
+remappedSrc/
 publish/
 
-# git
-
-.shelf/
-
-# idea
-
+# IDE
 .idea/
 *.iml
 *.ipr
 *.iws
-
-# eclipse
-*.launch
-
-# vscode
-
+.shelf/
 .settings/
 .vscode/
 bin/
@@ -30,10 +21,15 @@ bin/
 .project
 *.code-workspace
 
-# fabric
+# Eclipse
+*.launch
 
-run/
-logs/
+# OS/Tools
+.DS_Store
+Thumbs.db
 
-# documentation (keep local only)
+# Docs (local only)
 WIKI.md
+
+# Crush workspace
+.crush/

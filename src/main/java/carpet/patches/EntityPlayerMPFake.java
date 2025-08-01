@@ -153,7 +153,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     {
         player.getServer().getPlayerList().remove(player);
         player.connection.disconnect(Component.translatable("multiplayer.disconnect.duplicate_login"));
-        ServerLevel worldIn = player.serverLevel();//.getWorld(player.dimension);
+        ServerLevel worldIn = (ServerLevel) player.level();
         GameProfile gameprofile = player.getGameProfile();
         EntityPlayerMPFake playerShadow = new EntityPlayerMPFake(server, worldIn, gameprofile, player.clientInformation(), true);
         playerShadow.setChatSession(player.getChatSession());
@@ -238,11 +238,11 @@ public class EntityPlayerMPFake extends ServerPlayer
             lastSyncedEquipment.put(slot, stack.copy());
             
             // Count nearby players for logging
-            int nearbyPlayerCount = server.getPlayerList().getPlayers().size();
+            int nearbyPlayerCount = this.level().getServer().getPlayerList().getPlayers().size();
             
             // Use the existing broadcast pattern to synchronize equipment changes
             // This forces a refresh of the fake player's appearance to all nearby players
-            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            this.level().getServer().getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
             
             LOGGER.debug("Synced equipment change for fake player {} in slot {} to {} players", 
                 getName().getString(), slot.getName(), nearbyPlayerCount);
@@ -272,10 +272,10 @@ public class EntityPlayerMPFake extends ServerPlayer
             }
             
             // Count nearby players for logging
-            int nearbyPlayerCount = server.getPlayerList().getPlayers().size();
+            int nearbyPlayerCount = this.level().getServer().getPlayerList().getPlayers().size();
             
             // Force synchronization to all clients
-            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            this.level().getServer().getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
             
             LOGGER.debug("Completed full equipment sync for fake player {} - {} equipped slots synced to {} players", 
                 getName().getString(), syncedSlots, nearbyPlayerCount);
@@ -295,7 +295,7 @@ public class EntityPlayerMPFake extends ServerPlayer
             syncAllEquipmentToClients();
             
             // Force full synchronization using the existing broadcast pattern
-            server.getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
+            this.level().getServer().getPlayerList().broadcastAll(ClientboundEntityPositionSyncPacket.of(this), this.level().dimension());
             
             LOGGER.debug("External equipment sync completed for fake player {}", getName().getString());
         } catch (Exception e) {
@@ -409,7 +409,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     }
 
     public void fakePlayerDisconnect(Component reason) {
-        this.server.schedule(new TickTask(this.server.getTickCount(), () -> {
+        this.level().getServer().schedule(new TickTask(this.level().getServer().getTickCount(), () -> {
             this.connection.onDisconnect(new DisconnectionDetails(reason));
         }));
 
@@ -417,10 +417,10 @@ public class EntityPlayerMPFake extends ServerPlayer
 
     @Override
     public void tick() {
-        if (this.getServer().getTickCount() % 10 == 0)
+        if (this.level().getServer().getTickCount() % 10 == 0)
         {
             this.connection.resetPosition();
-            this.serverLevel().getChunkSource().move(this);
+            ((net.minecraft.server.level.ServerLevel)this.level()).getChunkSource().move(this);
         }
         try
         {
@@ -463,7 +463,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     private void handleRespawnEquipment() {
         try {
             // Check game rules for equipment handling on death
-            boolean keepInventory = this.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY);
+            boolean keepInventory = ((net.minecraft.server.level.ServerLevel) this.level()).getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY);
             
             if (keepInventory) {
                 // Restore all equipment if keepInventory is enabled
@@ -619,10 +619,11 @@ public class EntityPlayerMPFake extends ServerPlayer
                     this.invulnerableTime = 20;
                 }
                 String ign = this.getGameProfile().getName();
-                CommandSourceStack commandSource = server.createCommandSourceStack().withSuppressedOutput();
+                MinecraftServer srv = this.level().getServer();
+                CommandSourceStack commandSource = srv.createCommandSourceStack().withSuppressedOutput();
                 ParseResults<CommandSourceStack> parseResults
-                        = server.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable", ign), commandSource);
-                server.getCommands().performCommand(parseResults, "");
+                        = srv.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable", ign), commandSource);
+                srv.getCommands().performCommand(parseResults, "");
             } else {
                 this.playSound(SoundEvents.SHIELD_BLOCK.value(), 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
             }

@@ -31,16 +31,13 @@ import static carpet.script.CarpetEventServer.Event.PLAYER_FINISHED_USING_ITEM;
 import static carpet.script.CarpetEventServer.Event.STATISTICS;
 
 @Mixin(ServerPlayer.class)
-public abstract class ServerPlayer_scarpetEventMixin extends Player implements ServerPlayerInterface
+public abstract class ServerPlayer_scarpetEventMixin implements ServerPlayerInterface
 {
     // to denote if the player reference is valid
 
     @Unique
     private boolean isInvalidReference = false;
 
-    public ServerPlayer_scarpetEventMixin(Level level, BlockPos blockPos, float f, GameProfile gameProfile) {
-        super(level, blockPos, f, gameProfile);
-    }
 
     //@Shadow protected abstract void completeUsingItem();
 
@@ -54,16 +51,16 @@ public abstract class ServerPlayer_scarpetEventMixin extends Player implements S
     {
         if (PLAYER_FINISHED_USING_ITEM.isNeeded())
         {
-            InteractionHand hand = getUsedItemHand();
-            if(!PLAYER_FINISHED_USING_ITEM.onItemAction((ServerPlayer) (Object)this, hand, getUseItem())) {
+            InteractionHand hand = playerEntity.getUsedItemHand();
+            if(!PLAYER_FINISHED_USING_ITEM.onItemAction((ServerPlayer) (Object)this, hand, playerEntity.getUseItem())) {
                 // do vanilla
-                super.completeUsingItem();
+                playerEntity.releaseUsingItem(); // fall back to public API
             }
         }
         else
         {
             // do vanilla
-            super.completeUsingItem();
+            playerEntity.releaseUsingItem(); // fall back to public API
         }
     }
 
@@ -89,8 +86,9 @@ public abstract class ServerPlayer_scarpetEventMixin extends Player implements S
     @Inject(method = "teleport", at = @At("HEAD"))
     private void logPreviousCoordinates(TeleportTransition serverWorld, CallbackInfoReturnable<Entity> cir)
     {
-        previousLocation = position();
-        previousDimension = level().dimension();  //dimension type
+        ServerPlayer self = (ServerPlayer)(Object)this;
+        previousLocation = self.position();
+        previousDimension = self.level().dimension();  //dimension type
     }
 
     @Inject(method = "teleport", at = @At("RETURN"))
@@ -104,7 +102,7 @@ public abstract class ServerPlayer_scarpetEventMixin extends Player implements S
             Vec3 to = null;
             if (!wonGame || previousDimension != Level.END || destination.dimension() != Level.OVERWORLD)
             {
-                to = position();
+                to = player.position();
             }
             PLAYER_CHANGES_DIMENSION.onDimensionChange(player, previousLocation, to, previousDimension, destination.dimension());
         }

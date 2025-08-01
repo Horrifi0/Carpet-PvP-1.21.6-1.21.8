@@ -6,7 +6,6 @@ import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.LightTexture;
@@ -31,12 +30,11 @@ public class LevelRenderer_scarpetRenderMixin
         CarpetClient.shapes = new ShapesRenderer(minecraft);
     }
 
+    // 1.21.8: addParticlesPass RETURN callback now includes an extra GpuBufferSlice parameter in the injected signature
     @Inject(method = "addParticlesPass", at = @At("RETURN"))
-    private void renderScarpetThingsLate(FrameGraphBuilder frameGraphBuilder, Camera camera, float f, FogParameters fogParameters, CallbackInfo ci)
+    private void renderScarpetThingsLate(FrameGraphBuilder frameGraphBuilder, Camera camera, float f, com.mojang.blaze3d.buffers.GpuBufferSlice unused, CallbackInfo ci)
     {
         // in normal circumstances we want to render shapes at the very end so it appears correctly behind stuff.
-        // we might actually not need to play with render hooks here.
-        //if (!FabricAPIHooks.WORLD_RENDER_EVENTS && CarpetClient.shapes != null )
         if (CarpetClient.shapes != null)
         {
             FramePass pass = frameGraphBuilder.addPass("scarpet_shapes");

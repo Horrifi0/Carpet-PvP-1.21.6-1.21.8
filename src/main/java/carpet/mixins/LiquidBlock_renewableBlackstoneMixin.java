@@ -25,21 +25,21 @@ public abstract class LiquidBlock_renewableBlackstoneMixin
     @Shadow protected abstract void fizz(LevelAccessor world, BlockPos pos);
 
     @Inject(method = "shouldSpreadLiquid", at = @At("TAIL"), cancellable = true)
+    @SuppressWarnings("deprecation") // fluid.is(tag) has no non-deprecated replacement on FlowingFluid here
     private void receiveFluidToBlackstone(Level world, BlockPos pos, BlockState state, CallbackInfoReturnable<Boolean> cir)
     {
-        if (CarpetSettings.renewableBlackstone)
-        {
-            if (fluid.is(FluidTags.LAVA)) {
-                for(Direction direction : Direction.values())
-                {
-                    if (direction != Direction.DOWN) {
-                        BlockPos blockPos = pos.relative(direction); // offset
-                        if (world.getBlockState(blockPos).is(Blocks.BLUE_ICE)) {
-                            world.setBlockAndUpdate(pos, Blocks.BLACKSTONE.defaultBlockState());
-                            fizz(world, pos);
-                            cir.setReturnValue(false);
-                        }
-                    }
+        if (!CarpetSettings.renewableBlackstone) return;
+
+        if (fluid.is(FluidTags.LAVA)) {
+            for (Direction direction : Direction.values())
+            {
+                if (direction == Direction.DOWN) continue;
+                BlockPos blockPos = pos.relative(direction);
+                if (world.getBlockState(blockPos).is(Blocks.BLUE_ICE)) {
+                    world.setBlockAndUpdate(pos, Blocks.BLACKSTONE.defaultBlockState());
+                    fizz(world, pos);
+                    cir.setReturnValue(false);
+                    return;
                 }
             }
         }

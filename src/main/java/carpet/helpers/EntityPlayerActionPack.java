@@ -321,7 +321,7 @@ public class EntityPlayerActionPack
                         case BLOCK:
                         {
                             player.resetLastActionTime();
-                            ServerLevel world = player.serverLevel();
+                            ServerLevel world = (ServerLevel) player.level();
                             BlockHitResult blockHit = (BlockHitResult) hit;
                             BlockPos pos = blockHit.getBlockPos();
                             Direction side = blockHit.getDirection();

@@ -48,8 +48,8 @@ public class BlockInfo
         lst.add(Messenger.s(String.format(" - Light in: %d, above: %d",
                 Math.max(world.getBrightness(LightLayer.BLOCK, pos),world.getBrightness(LightLayer.SKY, pos)) ,
                 Math.max(world.getBrightness(LightLayer.BLOCK, pos.above()),world.getBrightness(LightLayer.SKY, pos.above())))));
-        lst.add(Messenger.s(String.format(" - Brightness in: %.2f, above: %.2f", world.getLightLevelDependentMagicValue(pos), world.getLightLevelDependentMagicValue(pos.above()))));
-        lst.add(Messenger.s(String.format(" - Is opaque: %s", state.isSolid() )));
+        lst.add(Messenger.s(String.format(" - Brightness in: %.2f, above: %.2f", (double)world.getMaxLocalRawBrightness(pos), (double)world.getMaxLocalRawBrightness(pos.above()))));
+        lst.add(Messenger.s(String.format(" - Is opaque: %s", state.canOcclude() )));
         //lst.add(Messenger.s(String.format(" - Light opacity: %d", state.getOpacity(world,pos))));
         //lst.add(Messenger.s(String.format(" - Emitted light: %d", state.getLightValue())));
         //lst.add(Messenger.s(String.format(" - Picks neighbour light value: %s", state.useNeighborBrightness(world, pos))));

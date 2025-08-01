@@ -37,9 +37,9 @@ public class NetHandlerPlayServerFake extends ServerGamePacketListenerImpl
     public void teleport(PositionMoveRotation positionMoveRotation, Set<Relative> set)
     {
         super.teleport(positionMoveRotation, set);
-        if (player.serverLevel().getPlayerByUUID(player.getUUID()) != null) {
+        if (((net.minecraft.server.level.ServerLevel) player.level()).getPlayerByUUID(player.getUUID()) != null) {
             resetPosition();
-            player.serverLevel().getChunkSource().move(player);
+            ((net.minecraft.server.level.ServerLevel) player.level()).getChunkSource().move(player);
         }
     }
 
