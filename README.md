@@ -8,12 +8,6 @@ Carpet PvP is a fork of TheobaldTheBird's Carpet PvP, we aim to provide frequent
 - **Fixed critical world loading issue** that prevented joining/creating worlds
 - **Resolved mixin injection error** in Commands_giveCommandMixin
 
-### ⚔️ Bot Armor Auto-Equipping System
-- **Automatic armor equipping** for fake players when using `/give` command
-- **Smart armor management** - only equips better armor, drops inferior pieces
-- **Extended `/player` command** with armor equipping functionality
-- **Scarpet integration** for programmatic armor management
-
 ### 🛠️ Technical Improvements
 - Comprehensive test suite with 100+ test cases
 - New utility classes for armor management
