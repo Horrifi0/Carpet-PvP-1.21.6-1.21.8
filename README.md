@@ -33,7 +33,10 @@ Contribute to Carpet PvP so that we can improve and make this mod better.
 
 ## Build
 
-Requirements: Java 21, Gradle wrapper
+Requirements: Java 21, Gradle wrapper. Manual test steps:
+- Build: ./gradlew build
+- Run client: ./gradlew runClient
+- Run server: ./gradlew runServer
 - Build jar: ./gradlew build
 - Run client (dev): ./gradlew runClient
 - Run server (dev): ./gradlew runServer
