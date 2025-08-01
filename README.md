@@ -38,7 +38,7 @@ Requirements: Java 21, Gradle wrapper. Manual test steps:
 
 ## Features
 
-- All original Carpet PvP functionality
+- All original Carpet PvP functionality, Breaks the Map.
 - Bot armor auto-equipping system
 - Extended player commands
 - Scarpet scripting integration
