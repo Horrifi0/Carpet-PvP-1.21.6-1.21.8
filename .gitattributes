@@ -1,2 +1,7 @@
-*.sc linguist-language=Python
-*.scl linguist-language=Python
+# Treat Scarpet files as their own (avoid skewing to Python)
+*.sc linguist-language=Scarpet
+*.scl linguist-language=Scarpet
+
+# Demote any incidental Python from language stats
+*.py linguist-vendored
+*.py linguist-detectable=false
