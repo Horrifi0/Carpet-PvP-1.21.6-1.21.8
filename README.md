@@ -31,6 +31,14 @@ Contribute to Carpet PvP so that we can improve and make this mod better.
 3. Ensure you have Fabric Loader and Fabric API installed
 4. Supported: Minecraft 1.21–1.21.8 (fabric.mod.json range: 1.21–1.22)
 
+## Build
+
+Requirements: Java 21, Gradle wrapper
+- Build jar: ./gradlew build
+- Run client (dev): ./gradlew runClient
+- Run server (dev): ./gradlew runServer
+- Publish to local maven: ./gradlew publishToMavenLocal
+
 ## Features
 
 - All original Carpet PvP functionality
