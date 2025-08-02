@@ -42,11 +42,15 @@ public abstract class Level_tickMixin implements LevelInterface
 
     @Inject(method = "tickBlockEntities", at = @At("HEAD"))
     private void startBlockEntities(CallbackInfo ci) {
-        currentSection = CarpetProfiler.start_section((Level) (Object) this, "Block Entities", CarpetProfiler.TYPE.GENERAL);
+        Level lvl = (Level)(Object)this;
+        if (lvl.getServer() != null && !lvl.getServer().isSameThread()) return;
+        currentSection = CarpetProfiler.start_section(lvl, "Block Entities", CarpetProfiler.TYPE.GENERAL);
     }
 
     @Inject(method = "tickBlockEntities", at = @At("TAIL"))
     private void endBlockEntities(CallbackInfo ci) {
+        Level lvl = (Level)(Object)this;
+        if (lvl.getServer() != null && !lvl.getServer().isSameThread()) return;
         CarpetProfiler.end_current_section(currentSection);
     }
 

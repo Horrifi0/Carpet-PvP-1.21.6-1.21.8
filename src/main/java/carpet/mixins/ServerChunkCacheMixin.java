@@ -34,9 +34,9 @@ public abstract class ServerChunkCacheMixin
     //this runs once per world spawning cycle. Allows to grab mob counts and count spawn ticks
     private int setupTracking(DistanceManager chunkTicketManager)
     {
+        if (this.level.getServer() != null && !this.level.getServer().isSameThread()) return chunkTicketManager.getNaturalSpawnChunkCount();
         int j = chunkTicketManager.getNaturalSpawnChunkCount();
-        ResourceKey<Level> dim = this.level.dimension(); // getDimensionType;
-        //((WorldInterface)world).getPrecookedMobs().clear(); not needed because mobs are compared with predefined BBs
+        ResourceKey<Level> dim = this.level.dimension();
         SpawnReporter.chunkCounts.put(dim, j);
 
         if (SpawnReporter.trackingSpawns())
@@ -57,7 +57,8 @@ public abstract class ServerChunkCacheMixin
     @Inject(method = "tickChunks(Lnet/minecraft/util/profiling/ProfilerFiller;J)V", at = @At("RETURN"))
     private void onFinishSpawnWorldCycle(CallbackInfo ci)
     {
-        LevelData levelData = this.level.getLevelData(); // levelProperies class
+        if (this.level.getServer() != null && !this.level.getServer().isSameThread()) return;
+        LevelData levelData = this.level.getLevelData();
         boolean boolean_3 = levelData.getGameTime() % 400L == 0L;
         if (SpawnReporter.trackingSpawns() && SpawnReporter.local_spawns != null)
         {

@@ -9,7 +9,7 @@ public class ParticleDisplay
     public static void drawParticleLine(ServerPlayer player, Vec3 from, Vec3 to, ParticleOptions mainParticle, ParticleOptions accentParticle, int count, double spread)
     {
 
-        if (accentParticle != null) player.serverLevel().sendParticles(
+        if (accentParticle != null) ((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(
                 player,
                 accentParticle,
                 true, true,
@@ -24,7 +24,7 @@ public class ParticleDisplay
              delta.lengthSqr() < lineLengthSq;
              delta = delta.add(incvec.scale(player.level().random.nextFloat())))
         {
-            player.serverLevel().sendParticles(
+            ((net.minecraft.server.level.ServerLevel) player.level()).sendParticles(
                     player,
                     mainParticle,
                     true, true,

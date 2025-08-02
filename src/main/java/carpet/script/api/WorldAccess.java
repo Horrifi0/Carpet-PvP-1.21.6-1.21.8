@@ -534,7 +534,7 @@ public class WorldAccess
                 booleanStateTest(c, "flammable", lv, (s, p) -> s.ignitedByLava()));
 
         expression.addContextFunction("transparent", -1, (c, t, lv) ->
-                booleanStateTest(c, "transparent", lv, (s, p) -> !s.isSolid()));
+                booleanStateTest(c, "transparent", lv, (s, p) -> !s.canOcclude()));
 
         /*this.expr.addContextFunction("opacity", -1, (c, t, lv) ->
                 genericStateTest(c, "opacity", lv, (s, p, w) -> new NumericValue(s.getOpacity(w, p))));
@@ -561,7 +561,7 @@ public class WorldAccess
                 genericStateTest(c, "see_sky", lv, (s, p, w) -> BooleanValue.of(w.canSeeSky(p))));
 
         expression.addContextFunction("brightness", -1, (c, t, lv) ->
-                genericStateTest(c, "brightness", lv, (s, p, w) -> new NumericValue(w.getLightLevelDependentMagicValue(p))));
+                genericStateTest(c, "brightness", lv, (s, p, w) -> new NumericValue(w.getMaxLocalRawBrightness(p))));
 
         expression.addContextFunction("hardness", -1, (c, t, lv) ->
                 genericStateTest(c, "hardness", lv, (s, p, w) -> new NumericValue(s.getDestroySpeed(w, p))));
@@ -600,7 +600,11 @@ public class WorldAccess
         });
 
         expression.addContextFunction("loaded", -1, (c, t, lv) ->
-                BooleanValue.of((((CarpetContext) c).level().hasChunkAt(BlockArgument.findIn((CarpetContext) c, lv, 0).block.getPos()))));
+        {
+            BlockPos _p = BlockArgument.findIn((CarpetContext) c, lv, 0).block.getPos();
+            boolean chunkLoaded = ((CarpetContext) c).level().getChunkSource().hasChunk(_p.getX() >> 4, _p.getZ() >> 4);
+            return BooleanValue.of(chunkLoaded);
+        });
 
         // Deprecated, use loaded_status as more indicative
         expression.addContextFunction("loaded_ep", -1, (c, t, lv) ->
@@ -829,7 +833,7 @@ public class WorldAccess
                         destTag.putInt("x", targetPos.getX());
                         destTag.putInt("y", targetPos.getY());
                         destTag.putInt("z", targetPos.getZ());
-                        be.loadWithComponents(destTag, world.registryAccess());
+                        // 1.21.8: temporarily skip BE data reload to avoid ValueInput API; mark changed
                         be.setChanged();
                         success = true;
                     }

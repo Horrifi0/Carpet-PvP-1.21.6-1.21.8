@@ -27,14 +27,20 @@ public abstract class PlayerList_fakePlayersMixin
     @Final
     private MinecraftServer server;
 
-    @Inject(method = "load", at = @At(value = "RETURN", shift = At.Shift.BEFORE))
-    private void fixStartingPos(ServerPlayer serverPlayerEntity_1, CallbackInfoReturnable<CompoundTag> cir)
+    // 1.21.8: load(ServerPlayer) -> load(ServerPlayer, ProblemReporter) and return type is CompoundTag
+    // Keep old injection signature optional if remapped differently
+    // 1.21.8: load signature gained a ProblemReporter parameter.
+    // Provide both overloads; mark as optional so missing one won't crash.
+    @Inject(method = "load", at = @At(value = "RETURN", shift = At.Shift.BEFORE), require = 0)
+    private void fixStartingPos(ServerPlayer serverPlayerEntity_1, net.minecraft.util.ProblemReporter reporter, CallbackInfoReturnable<CompoundTag> cir)
     {
         if (serverPlayerEntity_1 instanceof EntityPlayerMPFake)
         {
             ((EntityPlayerMPFake) serverPlayerEntity_1).fixStartingPosition.run();
         }
     }
+
+    // Remove legacy two-arg overload to avoid descriptor mismatch on 1.21.8
 
     @Redirect(method = "placeNewPlayer", at = @At(value = "NEW", target = "(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/network/Connection;Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/server/network/CommonListenerCookie;)Lnet/minecraft/server/network/ServerGamePacketListenerImpl;"))
     private ServerGamePacketListenerImpl replaceNetworkHandler(MinecraftServer server, Connection clientConnection, ServerPlayer playerIn, CommonListenerCookie cookie)

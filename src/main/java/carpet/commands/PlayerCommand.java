@@ -252,7 +252,7 @@ public class PlayerCommand
     private static int kill(CommandContext<CommandSourceStack> context) {
         if (cantReMove(context)) return 0;
         ServerPlayer player = getPlayer(context);
-        player.kill(player.serverLevel());
+        player.kill((net.minecraft.server.level.ServerLevel) player.level());
         return 1;
     }
 
@@ -375,8 +375,8 @@ public class PlayerCommand
             Messenger.m(context.getSource(), "r Cannot shadow single-player server owner");
             return 0;
         }
-
-        EntityPlayerMPFake.createShadow(player.server, player);
+ 
+        EntityPlayerMPFake.createShadow(player.level().getServer(), player);
         return 1;
     }
 

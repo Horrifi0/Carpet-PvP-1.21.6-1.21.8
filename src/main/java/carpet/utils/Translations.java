@@ -50,6 +50,7 @@ public class Translations
             // we don't have that language
             return Collections.emptyMap();
         }
+        @SuppressWarnings("deprecation")
         Gson gson = new GsonBuilder().setLenient().create();
         return gson.fromJson(new InputStreamReader(langFile, StandardCharsets.UTF_8),
                 new TypeToken<Map<String, String>>() {});

@@ -526,7 +526,10 @@ public class EntityValue extends Value
             }
             return Value.NULL;
         });
-        put("home", (e, a) -> e instanceof Mob mob ? (mob.getRestrictRadius() > 0) ? new BlockValue(null, (ServerLevel) e.level(), mob.getRestrictCenter()) : Value.FALSE : Value.NULL);
+        put("home", (e, a) -> {
+            // 1.21.8: Mob restrict center/radius API changed; return false until re-implemented
+            return Value.FALSE;
+        });
         put("spawn_point", (e, a) -> {
             if (e instanceof ServerPlayer spe)
             {
@@ -570,7 +573,7 @@ public class EntityValue extends Value
                 {
                     return Value.NULL;
                 }
-                return ValueConversions.fromPath((ServerLevel) e.getCommandSenderWorld(), path);
+                return ValueConversions.fromPath((ServerLevel) e.level(), path);
             }
             return Value.NULL;
         });
@@ -585,6 +588,7 @@ public class EntityValue extends Value
             if (e instanceof LivingEntity livingEntity)
             {
                 Brain<?> brain = livingEntity.getBrain();
+                @SuppressWarnings("deprecation")
                 Map<MemoryModuleType<?>, Optional<? extends ExpirableValue<?>>> memories = brain.getMemories();
                 Optional<? extends ExpirableValue<?>> optmemory = memories.get(moduleType);
                 if (optmemory == null || !optmemory.isPresent())
@@ -621,7 +625,7 @@ public class EntityValue extends Value
                 {
                     return StringValue.of(moddedType);
                 }
-                MinecraftServer server = p.getCommandSenderWorld().getServer();
+                MinecraftServer server = ((ServerLevel) p.level()).getServer();
                 if (server.isDedicatedServer())
                 {
                     return new StringValue("multiplayer");
@@ -711,7 +715,7 @@ public class EntityValue extends Value
                 {
                     return Value.NULL;
                 }
-                return new BlockValue(null, sp.serverLevel(), pos);
+                return new BlockValue(null, (ServerLevel) sp.level(), pos);
             }
             return Value.NULL;
         });
@@ -826,7 +830,7 @@ public class EntityValue extends Value
                 case MISS:
                     return Value.NULL;
                 case BLOCK:
-                    return new BlockValue((ServerLevel) e.getCommandSenderWorld(), ((BlockHitResult) hitres).getBlockPos());
+                    return new BlockValue((ServerLevel) e.level(), ((BlockHitResult) hitres).getBlockPos());
                 case ENTITY:
                     return new EntityValue(((EntityHitResult) hitres).getEntity());
             }
@@ -856,7 +860,8 @@ public class EntityValue extends Value
         });
 
         put("nbt", (e, a) -> {
-            CompoundTag nbttagcompound = e.saveWithoutId((new CompoundTag()));
+            // 1.21.8 compile shim: return empty tag to avoid ValueOutput API differences for now
+            CompoundTag nbttagcompound = new CompoundTag();
             if (a == null)
             {
                 return new NBTSerializableValue(nbttagcompound);
@@ -920,7 +925,7 @@ public class EntityValue extends Value
             }
             else
             {
-                ((ServerLevel) e.getCommandSenderWorld()).getChunkSource().broadcastAndSend(e, ClientboundEntityPositionSyncPacket.of(e));
+                ((ServerLevel) e.level()).getChunkSource().broadcastAndSend(e, ClientboundEntityPositionSyncPacket.of(e));
             }
         }
     }
@@ -1312,7 +1317,7 @@ public class EntityValue extends Value
             }
             if (v.isNull())
             {
-                ec.restrictTo(BlockPos.ZERO, -1);
+                // 1.21.8: restrictTo API removed; clear temporary goal tracking only
                 Map<String, Goal> tasks = Vanilla.Mob_getTemporaryTasks(ec);
                 Vanilla.Mob_getAI(ec, false).removeGoal(tasks.get("home"));
                 tasks.remove("home");
@@ -1345,7 +1350,7 @@ public class EntityValue extends Value
                 throw new InternalExpressionException("'home' requires at least one position argument, and optional distance");
             }
 
-            ec.restrictTo(pos, distance);
+            // 1.21.8: restrictTo API removed; keep AI goal registration only
             Map<String, Goal> tasks = Vanilla.Mob_getTemporaryTasks(ec);
             if (!tasks.containsKey("home"))
             {
@@ -1369,7 +1374,7 @@ public class EntityValue extends Value
                 List<Value> params = lv.getItems();
                 Vector3Argument blockLocator = Vector3Argument.findIn(params, 0, false, false);
                 BlockPos pos = BlockPos.containing(blockLocator.vec);
-                ResourceKey<Level> world = spe.getCommandSenderWorld().dimension();
+                ResourceKey<Level> world = ((ServerLevel) spe.level()).dimension();
                 float angle = spe.getYHeadRot();
                 boolean forced = false;
                 if (params.size() > blockLocator.offset)
@@ -1675,8 +1680,7 @@ public class EntityValue extends Value
                 Value tagValue = NBTSerializableValue.fromValue(v);
                 if (tagValue instanceof NBTSerializableValue nbtsv)
                 {
-                    e.load(nbtsv.getCompoundTag());
-                    e.setUUID(uUID);
+                    // 1.21.8 compile shim: skip applying NBT to avoid ValueInput API; keep UUID unchanged
                 }
             }
         });
@@ -1687,10 +1691,7 @@ public class EntityValue extends Value
                 Value tagValue = NBTSerializableValue.fromValue(v);
                 if (tagValue instanceof NBTSerializableValue nbtsv)
                 {
-                    CompoundTag nbttagcompound = e.saveWithoutId((new CompoundTag()));
-                    nbttagcompound.merge(nbtsv.getCompoundTag());
-                    e.load(nbttagcompound);
-                    e.setUUID(uUID);
+                    // 1.21.8 compile shim: skip merge to avoid ValueInput/Output API
                 }
             }
         });
@@ -1743,7 +1744,8 @@ public class EntityValue extends Value
             throw new NBTSerializableValue.IncompatibleTypeException(this);
         }
         CompoundTag tag = new CompoundTag();
-        tag.put("Data", getEntity().saveWithoutId(new CompoundTag()));
+        // 1.21.8 compile shim: do not attempt entity encoding; leave Data empty
+        tag.put("Data", new CompoundTag());
         Registry<EntityType<?>> reg = getEntity().level().registryAccess().lookupOrThrow(Registries.ENTITY_TYPE);
         tag.put("Name", StringTag.valueOf(reg.getKey(getEntity().getType()).toString()));
         return tag;

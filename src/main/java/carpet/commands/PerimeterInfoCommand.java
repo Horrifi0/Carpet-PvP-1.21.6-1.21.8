@@ -39,7 +39,10 @@ public class PerimeterInfoCommand
                                 BlockPosArgument.getSpawnablePos(c, "center position"),
                                 null)).
                         then(argument("mob", resource(commandBuildContext, Registries.ENTITY_TYPE)).
-                                suggests(SuggestionProviders.SUMMONABLE_ENTITIES).
+                                suggests((ctx, builder) -> {
+                                    var reg = ctx.getSource().registryAccess().lookupOrThrow(Registries.ENTITY_TYPE);
+                                    return net.minecraft.commands.SharedSuggestionProvider.suggestResource(reg.keySet(), builder);
+                                }).
                                 executes( (c) -> perimeterDiagnose(
                                         c.getSource(),
                                         BlockPosArgument.getSpawnablePos(c, "center position"),

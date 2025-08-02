@@ -145,7 +145,7 @@ public class AppStoreManager
             String response;
             try
             {
-                response = IOUtils.toString(new URL(queryPath), StandardCharsets.UTF_8);
+                response = IOUtils.toString(java.net.URI.create(queryPath).toURL(), StandardCharsets.UTF_8);
             }
             catch (IOException e)
             {
@@ -274,7 +274,7 @@ public class AppStoreManager
         String code;
         try
         {
-            code = IOUtils.toString(new URL(nodeInfo.url()), StandardCharsets.UTF_8);
+            code = IOUtils.toString(java.net.URI.create(nodeInfo.url()).toURL(), StandardCharsets.UTF_8);
         }
         catch (IOException e)
         {
@@ -358,7 +358,7 @@ public class AppStoreManager
 
     public static void writeUrlToFile(String url, Path destination) throws IOException
     {
-        try (InputStream in = new URL(url).openStream())
+        try (InputStream in = java.net.URI.create(url).toURL().openStream())
         {
             Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
         }

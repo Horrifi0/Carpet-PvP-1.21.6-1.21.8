@@ -68,7 +68,8 @@ public abstract class LivingEntity_maxCollisionsMixin extends Entity
                 }
 
                 if (candidates > maxEntityCramming - 1) {
-                    this.hurt(damageSources().cramming(), 6.0F);
+                    float _amount = 6.0F;
+                    ((LivingEntity)(Object)this).hurt(damageSources().cramming(), _amount);
                 }
             }
             if (CarpetSettings.maxEntityCollisions > 0 && entities.size() > CarpetSettings.maxEntityCollisions)

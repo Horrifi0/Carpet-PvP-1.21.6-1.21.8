@@ -34,6 +34,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void startWeatherSection(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         currentSection = CarpetProfiler.start_section((Level)(Object)this, "Environment", CarpetProfiler.TYPE.GENERAL);
     }
     @Inject(method = "tick", at = @At(
@@ -42,6 +43,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void stopWeatherStartTileTicks(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null)
         {
             CarpetProfiler.end_current_section(currentSection);
@@ -54,6 +56,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void stopTileTicksStartRaid(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null)
         {
             CarpetProfiler.end_current_section(currentSection);
@@ -67,6 +70,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void stopRaid(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null)
         {
             CarpetProfiler.end_current_section(currentSection);
@@ -78,6 +82,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void startBlockEvents(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         currentSection = CarpetProfiler.start_section((Level) (Object) this, "Block Events", CarpetProfiler.TYPE.GENERAL);
     }
 
@@ -87,6 +92,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void stopBlockEventsStartEntitySection(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null)
         {
             CarpetProfiler.end_current_section(currentSection);
@@ -101,6 +107,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
     ))
     private void endEntitySection(BooleanSupplier booleanSupplier_1, CallbackInfo ci)
     {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         CarpetProfiler.end_current_section(currentSection);
         currentSection = null;
     }
@@ -109,7 +116,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
 
     @Inject(method = "tickChunk", at = @At("HEAD"))
     private void startThunderSpawningSection(CallbackInfo ci) {
-        // Counting it in spawning because it's spawning skeleton horses
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         currentSection = CarpetProfiler.start_section((Level) (Object) this, "Spawning", CarpetProfiler.TYPE.GENERAL);
     }
 
@@ -118,6 +125,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
             args = "stringValue=iceandsnow"
     ))
     private void endThunderSpawningAndStartIceSnowRandomTicks(CallbackInfo ci) {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null) {
             CarpetProfiler.end_current_section(currentSection);
             currentSection = CarpetProfiler.start_section((Level) (Object) this, "Environment", CarpetProfiler.TYPE.GENERAL);
@@ -129,6 +137,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
             args = "stringValue=tickBlocks"
     ))
     private void endIceAndSnowAndStartRandomTicks(CallbackInfo ci) {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null) {
             CarpetProfiler.end_current_section(currentSection);
             currentSection = CarpetProfiler.start_section((Level) (Object) this, "Random Ticks", CarpetProfiler.TYPE.GENERAL);
@@ -137,6 +146,7 @@ public abstract class ServerLevel_tickMixin extends Level implements LevelInterf
 
     @Inject(method = "tickChunk", at = @At("RETURN"))
     private void endRandomTicks(CallbackInfo ci) {
+        if (this.getServer() != null && !this.getServer().isSameThread()) return;
         if (currentSection != null) {
             CarpetProfiler.end_current_section(currentSection);
             currentSection = null;

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "carpet",
-  "version": "11.2",
+  "version": "11.3",
   "name": "Carpet PVP",
   "description": "Carpet with some PVP tweaks",
   "authors": [
-    "AndrewCTF, gnembon, TheobaldTheBird"
+    "AndrewCTF, gnembon, TheobaldTheBird, redbuc"
   ],  "contact": {
     "homepage": "https://github.com/AndrewCTF/Carpet-PvP",
     "issues": "https://github.com/AndrewCTF/Carpet-PvP/issues",
@@ -28,9 +28,10 @@
   "mixins": [
     "carpet.mixins.json"
   ],
-  "accessWidener" : "carpet.accesswidener",  "depends": {
-    "minecraft": ">=1.21.5",
-    "fabricloader": ">=0.16.10",
+  "accessWidener" : "carpet.accesswidener",
+  "depends": {
+    "minecraft": ">=1.21 <1.23",
+    "fabricloader": ">=0.16.14",
     "java": ">=21"
   }
 }
