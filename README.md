@@ -18,6 +18,10 @@ Carpet PvP is a fork of TheobaldTheBird's Carpet PvP, we aim to provide frequent
 
 Contribute to Carpet PvP so that we can improve and make this mod better.
 
+## Contributers
+- @AndrewCTF (Owner)
+- @Horrifi0
+  
 ## Installation
 
 1. Download the latest release from the [Releases](https://github.com/AndrewCTF/Carpet-PvP/releases) page
