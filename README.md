@@ -23,7 +23,7 @@ Contribute to Carpet PvP so that we can improve and make this mod better.
 1. Download the latest release from the [Releases](https://github.com/AndrewCTF/Carpet-PvP/releases) page
 2. Place the `.jar` file in your `mods` folder
 3. Ensure you have Fabric Loader and Fabric API installed
-4. Supported: Minecraft 1.21–1.21.8 (fabric.mod.json range: 1.21–1.22)
+4. Supported: Minecraft [1.21.6, 1.21.7, 1.21.8] (fabric.mod.json range: 1.21–1.22)
 
 ## Build
 
