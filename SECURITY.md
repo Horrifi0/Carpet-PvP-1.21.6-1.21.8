@@ -12,6 +12,6 @@ Supported version will regularly receive updates, whereas unsupported version wi
 ## Reporting a Vulnerability 
 Reporting a vulnerability is very important, here is the steps to report a vulnerability.
 1. Go to the issues page.
-2. Select the Security tag.
+2. Select the Security label.
 3. Write your issue.
-4. Publish the issue.
+4. Select "Create" to publish the issue.
