@@ -36,21 +36,17 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
     ) {
         this.carpet$pushed = false;
         if (player == null) return;
+        if (hand != InteractionHand.MAIN_HAND) return; // limit to main hand for safety
         if (!SwordBlockVisuals.isActive(player)) return;
         if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
 
-        boolean right = (hand == InteractionHand.MAIN_HAND && player.getMainArm() == HumanoidArm.RIGHT)
-                || (hand == InteractionHand.OFF_HAND && player.getMainArm() == HumanoidArm.LEFT);
+        boolean right = player.getMainArm() == HumanoidArm.RIGHT;
 
         poseStack.pushPose();
         this.carpet$pushed = true;
-        // Mild defensive pose to keep item in view
-        float rotY = right ? -35.0f : 35.0f;
-        float rotX = -20.0f;
-        float transX = right ? -0.12f : 0.12f;
-        float transY = 0.02f; // slight up
-        float transZ = 0.0f;  // avoid moving into/away from camera to prevent clipping
-        poseStack.translate(transX, transY, transZ);
+        // Very mild defensive pose to avoid hiding the item
+        float rotY = right ? -15.0f : 15.0f;
+        float rotX = -10.0f;
         poseStack.mulPose(new Quaternionf().rotationXYZ((float) Math.toRadians(rotX), (float) Math.toRadians(rotY), 0));
     }
 
