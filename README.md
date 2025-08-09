@@ -23,7 +23,7 @@ Requirements: Java 21, Gradle wrapper. Manual test steps:
 - Build: ./gradlew build
 - Run client: ./gradlew runClient
 - Run server: ./gradlew runServer
-- Build jar: ./gradlew build
+- Build jar: ./gradlew build -x test
 - Run client (dev): ./gradlew runClient
 - Run server (dev): ./gradlew runServer
 - Publish to local maven: ./gradlew publishToMavenLocal
