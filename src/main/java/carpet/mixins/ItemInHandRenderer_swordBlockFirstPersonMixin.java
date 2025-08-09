@@ -56,7 +56,7 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
 
         // Lower slightly to keep the tip height near original; pure negative Y, no X/Z shift.
-        float drop = 0.80f * ease; // tune if still too high/low
+        float drop = 0.20f * ease; // tune if still too high/low
         poseStack.translate(0.0F, -drop, 0.0F);
     }
 
