@@ -20,8 +20,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
     @Unique private boolean carpet$pushed;
 
-    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
-    private void carpet$blockHitStart(
+    // Inject immediately before the item render call so rotation doesn't get retranslated by vanilla transforms
+    @Inject(
+        method = "renderArmWithItem",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            shift = At.Shift.BEFORE
+        )
+    )
+    private void carpet$blockHitBeforeRender(
             AbstractClientPlayer player,
             float partialTick,
             float pitch,
@@ -45,22 +53,24 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         poseStack.pushPose();
         this.carpet$pushed = true;
 
-        float ease;
-        if (holding) {
-            ease = 1.0f;
-        } else {
-            int left = SwordBlockVisuals.remaining(player);
-            ease = Math.min(1.0f, left / 6.0f);
-            ease = ease * ease;
-        }
+        float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
+        ease = ease * ease;
 
-        // Only yaw (turn left). No pitch, no roll, no translation.
-        float yawLeft = 14.0f * ease; // positive yaw turns left in first-person
+        // Yaw-only rotation (turn left). No pitch/roll/translation, applied right before rendering.
+        float yawLeft = 14.0f * ease;
         poseStack.mulPose(new Quaternionf().rotationXYZ(0f, (float) Math.toRadians(yawLeft), 0f));
     }
 
-    @Inject(method = "renderArmWithItem", at = @At("RETURN"))
-    private void carpet$blockHitEnd(
+    // Pop right after the render call to restore the matrix
+    @Inject(
+        method = "renderArmWithItem",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            shift = At.Shift.AFTER
+        )
+    )
+    private void carpet$blockHitAfterRender(
             AbstractClientPlayer player,
             float partialTick,
             float pitch,
