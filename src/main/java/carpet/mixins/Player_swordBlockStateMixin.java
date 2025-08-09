@@ -3,6 +3,8 @@ package carpet.mixins;
 import carpet.CarpetSettings;
 import carpet.fakes.PlayerSwordBlockInterface;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -34,6 +36,9 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
 
     @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
     private void applySwordBlock(ServerLevel serverLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+    if (!CarpetSettings.swordBlockHitting) return;
+    // Continuous block while holding use on a sword (via consumable block animation)
+    if (this.isUsingItem() && this.getUseItem().is(ItemTags.SWORDS) && amount > 0.0f) {
         if (!CarpetSettings.swordBlockHitting) return;
         if (this.carpet$swordBlockTicks > 0 && amount > 0.0f) {
             float reduced = (float) Math.max(0.0, amount * CarpetSettings.swordBlockDamageMultiplier);
@@ -44,6 +49,8 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
         }
     }
 
+
+
     @Inject(method = "knockback", at = @At("HEAD"))
     private void scaleKb(Entity attacker, double strength, double x, double z, CallbackInfo ci) {
         if (CarpetSettings.swordBlockHitting && this.carpet$swordBlockTicks > 0) {
@@ -51,4 +58,5 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
             attacker.setDeltaMovement(attacker.getDeltaMovement().scale(this.carpet$pendingKbMultiplier));
         }
     }
+
 }

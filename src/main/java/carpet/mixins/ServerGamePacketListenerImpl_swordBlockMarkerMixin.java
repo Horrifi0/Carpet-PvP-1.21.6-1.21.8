@@ -2,6 +2,10 @@ package carpet.mixins;
 
 import carpet.CarpetSettings;
 import carpet.fakes.PlayerSwordBlockInterface;
+import carpet.network.payload.SwordBlockPayload;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -24,6 +28,32 @@ public abstract class ServerGamePacketListenerImpl_swordBlockMarkerMixin {
         InteractionHand hand = packet.getHand();
         ItemStack stack = player.getItemInHand(hand);
         if (!stack.isEmpty() && stack.is(ItemTags.SWORDS)) {
+            int ticks = CarpetSettings.swordBlockWindowTicks;
+            ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(ticks);
+            // broadcast simple visual cue to nearby clients
+            ClientboundCustomPayloadPacket msg = new ClientboundCustomPayloadPacket(new SwordBlockPayload(player.getId(), ticks));
+            for (ServerPlayer p : player.level().players()) {
+                if (p.distanceToSqr(player) < 64*64) {
+                    p.connection.send(msg);
+                }
+            }
+        }
+    }
+
+    @Inject(method = "handleUseItemOn", at = @At("HEAD"))
+    private void markSwordBlockOn(ServerboundUseItemOnPacket packet, CallbackInfo ci) {
+        if (!CarpetSettings.swordBlockHitting) return;
+        InteractionHand hand = packet.getHand();
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.isEmpty() && stack.is(ItemTags.SWORDS)) {
+            int ticks = CarpetSettings.swordBlockWindowTicks;
+            ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(ticks);
+            ClientboundCustomPayloadPacket msg = new ClientboundCustomPayloadPacket(new SwordBlockPayload(player.getId(), ticks));
+            for (ServerPlayer p : player.level().players()) {
+                if (p.distanceToSqr(player) < 64*64) {
+                    p.connection.send(msg);
+                }
+            }
             ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(CarpetSettings.swordBlockWindowTicks);
         }
     }

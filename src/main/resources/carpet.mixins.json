@@ -201,7 +201,9 @@
     "LevelRenderer_scarpetRenderMixin",
 
 
-    "ClientCommonPacketListenerImpl_customPacketMixin"
+    "ClientCommonPacketListenerImpl_customPacketMixin",
+  "PlayerRenderer_swordBlockArmPoseMixin",
+  "ItemInHandRenderer_swordBlockFirstPersonMixin"
   ],
   "injectors": {
     "defaultRequire": 1
