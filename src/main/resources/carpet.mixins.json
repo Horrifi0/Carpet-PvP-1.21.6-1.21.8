@@ -178,9 +178,9 @@
 
     "DefaultRedstoneWireEvaluator_redstoneMixin",
 
-    "CustomPacketPayload_networkStuffMixin",
-    "ServerGamePacketListenerimpl_connectionMixin",
-    "Player_attackCooldown_18CombatMixin",
+  "CustomPacketPayload_networkStuffMixin",
+  "ServerGamePacketListenerimpl_connectionMixin",
+  "Player_attackCooldown_18CombatMixin",
   "Player_attackResetTicker_18CombatMixin",
   "Player_swordBlockStateMixin"
   ],
@@ -200,9 +200,7 @@
     "LevelRenderer_scarpetRenderMixin",
 
 
-  "ClientCommonPacketListenerImpl_customPacketMixin",
-  "PlayerRenderer_swordBlockArmPoseMixin",
-  "ItemInHandRenderer_swordBlockFirstPersonMixin"
+  "ClientCommonPacketListenerImpl_customPacketMixin"
   ],
   "injectors": {
     "defaultRequire": 1
