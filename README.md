@@ -35,3 +35,4 @@ Requirements: Java 21, Gradle wrapper. Manual test steps:
 - Extended player commands
 - Scarpet scripting integration
 - Comprehensive testing framework
+- 1.8 combat features
