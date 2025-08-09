@@ -21,16 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
     @Unique private boolean carpet$pushed;
 
-    // Inject immediately before the item render call so rotation doesn't get retranslated by vanilla transforms
-    @Inject(
-        method = "renderArmWithItem",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            shift = At.Shift.BEFORE
-        )
-    )
-    private void carpet$blockHitBeforeRender(
+    // Safe, mapping-stable hook: at HEAD with a matching pop at RETURN
+    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
+    private void carpet$blockHitStart(
             AbstractClientPlayer player,
             float partialTick,
             float pitch,
@@ -57,23 +50,15 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
         ease = ease * ease;
 
-        // Roll-only rotation to "turn left" in screen space, no pitch/yaw/translation.
+        // Roll-only tilt so the sword "turns left" in-place. No pitch/yaw/translation.
         float baseAngle = 16.0f; // degrees
         float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // right-hand turns left on screen
         float roll = dir * baseAngle * ease;
         poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
     }
 
-    // Pop right after the render call to restore the matrix
-    @Inject(
-        method = "renderArmWithItem",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            shift = At.Shift.AFTER
-        )
-    )
-    private void carpet$blockHitAfterRender(
+    @Inject(method = "renderArmWithItem", at = @At("RETURN"))
+    private void carpet$blockHitEnd(
             AbstractClientPlayer player,
             float partialTick,
             float pitch,
