@@ -5,6 +5,13 @@
   "mixins": [
     "BarrierBlock_updateSuppressionBlockMixin",
     "SpawnState_scarpetMixin",
+    "CustomPacketPayload_networkStuffMixin",
+    "ServerGamePacketListenerimpl_connectionMixin",
+    "Player_attackCooldown_18CombatMixin",
+    "Player_attackResetTicker_18CombatMixin",
+    "Player_swordBlockStateMixin",
+    "SwordItem_blockHitting_18CombatMixin",
+    "SwordItem_blockHitting_18CombatMixin",
     "MobCategory_spawnMixin",
     "Commands_customCommandsMixin",
     "Commands_giveCommandMixin",

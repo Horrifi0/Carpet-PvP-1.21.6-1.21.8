@@ -4,6 +4,7 @@ import carpet.CarpetSettings;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -27,7 +28,7 @@ public class SwordItem_blockHitting_18CombatMixin {
     }
     
     @Inject(method = "getUseDuration", at = @At("HEAD"), cancellable = true)
-    private void setSwordUseDuration(ItemStack stack, CallbackInfoReturnable<Integer> cir) {
+    private void setSwordUseDuration(ItemStack stack, LivingEntity entity, CallbackInfoReturnable<Integer> cir) {
         if (!CarpetSettings.swordBlockHitting) return;
         if (!stack.is(ItemTags.SWORDS)) return;
         
