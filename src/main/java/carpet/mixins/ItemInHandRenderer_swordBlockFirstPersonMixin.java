@@ -54,9 +54,17 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
             ease = ease * ease;
         }
 
-        float rotY = -18.0f * ease;
-        float rotX = -10.0f * ease;
-        poseStack.mulPose(new Quaternionf().rotationXYZ((float) Math.toRadians(rotX), (float) Math.toRadians(rotY), 0));
+        // Softer, centered pose that keeps the sword visible
+        float rotY = -10.0f * ease;   // slight turn towards the screen center
+        float rotX = -6.0f * ease;    // slight raise
+        float rotZ = 12.0f * ease;    // slight inward tilt
+        poseStack.mulPose(new Quaternionf().rotationXYZ(
+                (float) Math.toRadians(rotX),
+                (float) Math.toRadians(rotY),
+                (float) Math.toRadians(rotZ)
+        ));
+        // Nudge upwards and closer so it doesn't fall out of view during use/equip transforms
+        poseStack.translate(0.0F, 0.08F * ease, -0.05F * ease);
     }
 
     @Inject(method = "renderArmWithItem", at = @At("RETURN"))
