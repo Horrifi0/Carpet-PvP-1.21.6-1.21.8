@@ -6,6 +6,7 @@ import carpet.network.payload.SwordBlockPayload;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.ItemTags;
@@ -53,6 +54,7 @@ public abstract class ServerGamePacketListenerImpl_swordBlockMarkerMixin {
                     p.connection.send(msg);
                 }
             }
+            ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(CarpetSettings.swordBlockWindowTicks);
         }
     }
 }

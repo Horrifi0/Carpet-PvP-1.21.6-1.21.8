@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "carpet",
   "version": "12",
+  "version": "11.4",
   "name": "Carpet PVP",
   "description": "Carpet with some PVP tweaks",
   "authors": [
