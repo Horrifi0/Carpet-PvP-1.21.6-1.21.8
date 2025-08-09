@@ -1,0 +1,7 @@
+{
+  "parent": "item/handheld",
+  "textures": { "layer0": "item/stone_sword" },
+  "overrides": [
+    { "predicate": { "minecraft:using": 1.0 }, "model": "minecraft:item/stone_sword_blocking" }
+  ]
+}
