@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Quaternionf;
@@ -56,9 +57,11 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
         ease = ease * ease;
 
-        // Yaw-only rotation (turn left). No pitch/roll/translation, applied right before rendering.
-        float yawLeft = 14.0f * ease;
-        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, (float) Math.toRadians(yawLeft), 0f));
+        // Yaw-only rotation towards screen center based on main hand. No pitch/roll/translation.
+        float baseAngle = 14.0f; // degrees
+        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
+        float yaw = dir * baseAngle * ease;
+        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, (float) Math.toRadians(yaw), 0f));
     }
 
     // Pop right after the render call to restore the matrix
