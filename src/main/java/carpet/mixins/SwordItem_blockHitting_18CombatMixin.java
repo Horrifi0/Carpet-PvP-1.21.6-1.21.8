@@ -1,4 +1,4 @@
 package carpet.mixins;
 
-// Placeholder; blocking is driven by consumable:block components and server-side checks.
+// Reverting to placeholder - classes not available in current mappings
 public class SwordItem_blockHitting_18CombatMixin {}
