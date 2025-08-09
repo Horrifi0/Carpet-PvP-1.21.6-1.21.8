@@ -49,11 +49,15 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
         ease = ease * ease;
 
-        // Roll-only in-place tilt (Z axis). This avoids lateral "orbit" caused by yaw before vanilla translations.
-        float baseAngle = 60.0f; // strong left tilt (>45°)
-        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // turn toward screen center
+        // Roll-only in-place tilt (Z axis). Strong left tilt (>45°) toward center.
+        float baseAngle = 60.0f;
+        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
         float roll = dir * baseAngle * ease;
         poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
+
+        // Lower slightly to keep the tip height near original; pure negative Y, no X/Z shift.
+        float drop = 1.08f * ease; // tune if still too high/low
+        poseStack.translate(0.0F, -drop, 0.0F);
     }
 
     @Inject(method = "renderArmWithItem", at = @At("RETURN"))
