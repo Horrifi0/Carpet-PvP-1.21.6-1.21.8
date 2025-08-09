@@ -21,7 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
     @Unique private boolean carpet$pushed;
 
-    // Safe, mapping-stable hook: at HEAD with a matching pop at RETURN
     @Inject(method = "renderArmWithItem", at = @At("HEAD"))
     private void carpet$blockHitStart(
             AbstractClientPlayer player,
@@ -50,11 +49,11 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
         ease = ease * ease;
 
-        // Roll-only tilt so the sword "turns left" in-place. No pitch/yaw/translation.
-        float baseAngle = 60.0f; // increased tilt to >45 degrees
-        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // right-hand turns left on screen
-        float roll = dir * baseAngle * ease;
-        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
+        // Yaw-only rotation (turn left) in-place. No pitch/roll/translation.
+        float baseAngle = 60.0f; // strong turn (>45°)
+        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // turn toward screen center
+        float yaw = dir * baseAngle * ease;
+        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, (float) Math.toRadians(yaw), 0f));
     }
 
     @Inject(method = "renderArmWithItem", at = @At("RETURN"))
