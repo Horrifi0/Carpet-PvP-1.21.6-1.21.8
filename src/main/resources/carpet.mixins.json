@@ -179,8 +179,11 @@
     "DefaultRedstoneWireEvaluator_redstoneMixin",
 
     "CustomPacketPayload_networkStuffMixin",
-    "ServerGamePacketListenerimpl_connectionMixin"
-
+    "ServerGamePacketListenerimpl_connectionMixin",
+    "Player_attackCooldown_18CombatMixin",
+    "Player_attackResetTicker_18CombatMixin",
+    "Player_swordBlockStateMixin",
+    "ServerGamePacketListenerImpl_swordBlockMarkerMixin"
   ],
   "client": [
     "Minecraft_tickMixin",

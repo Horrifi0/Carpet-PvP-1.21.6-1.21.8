@@ -1,5 +1,7 @@
 package carpet.mixins;
 
+import carpet.CarpetSettings;
+import carpet.fakes.PlayerSwordBlockInterface;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.damagesource.DamageSource;
@@ -21,18 +23,21 @@ public abstract class LivingEntity_getKBFix {
             cancellable = true
     )
     private void modifyKnockback(Entity entity, DamageSource damageSource, CallbackInfoReturnable<Float> cir) {
-        if (entity instanceof LivingEntity target && target.invulnerableTime < 20) {
-            cir.setReturnValue(0.0F);
-            return;
+        // entity is the target (victim)
+        boolean targetIsBlocking = false;
+        if (CarpetSettings.swordBlockHitting && entity instanceof LivingEntity target && target instanceof PlayerSwordBlockInterface) {
+            targetIsBlocking = ((PlayerSwordBlockInterface) target).carpet$getSwordBlockTicks() > 0;
         }
 
         float baseKnockback = (float) ((LivingEntity) (Object) this).getAttributeValue(Attributes.ATTACK_KNOCKBACK);
         Level level = ((LivingEntity) (Object) this).level();
+        float result = baseKnockback;
         if (level instanceof ServerLevel serverLevel) {
-            float modifiedKnockback = EnchantmentHelper.modifyKnockback(serverLevel, ((LivingEntity) (Object) this).getMainHandItem(), entity, damageSource, baseKnockback);
-            cir.setReturnValue(modifiedKnockback);
-        } else {
-            cir.setReturnValue(baseKnockback);
+            result = EnchantmentHelper.modifyKnockback(serverLevel, ((LivingEntity) (Object) this).getMainHandItem(), entity, damageSource, baseKnockback);
         }
+        if (targetIsBlocking) {
+            result *= (float) CarpetSettings.swordBlockKnockbackMultiplier;
+        }
+        cir.setReturnValue(result);
     }
 }
