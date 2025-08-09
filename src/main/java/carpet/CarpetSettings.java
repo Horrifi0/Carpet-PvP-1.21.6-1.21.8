@@ -1039,4 +1039,67 @@ public class CarpetSettings
             category = {SURVIVAL, FEATURE}
     )
     public static boolean shieldStunning = false;
+
+    @Rule(
+            desc = "Removes attack cooldown to allow 1.8-style spam clicking",
+            category = FEATURE
+    )
+    public static boolean spamClickCombat = false;
+
+    @Rule(
+            desc = "Enables 1.8-style sword block hitting on right click",
+            extra = "Right-clicking with a sword grants a short block window reducing damage/KB",
+            category = FEATURE
+    )
+    public static boolean swordBlockHitting = false;
+
+    @Rule(
+            desc = "Block-hitting window length in ticks",
+            category = FEATURE,
+            validate = Validators.NonNegativeNumber.class
+    )
+    public static int swordBlockWindowTicks = 6;
+
+    @Rule(
+            desc = "Damage multiplier while block-hitting (0.0-1.0)",
+            category = FEATURE,
+            validate = Validators.Probablity.class
+    )
+    public static double swordBlockDamageMultiplier = 0.5D;
+
+    @Rule(
+            desc = "Knockback multiplier while block-hitting (0.0-1.0)",
+            category = FEATURE,
+            validate = Validators.Probablity.class
+    )
+    public static double swordBlockKnockbackMultiplier = 0.5D;
+
+    @Rule(
+            desc = "Enable overriding damage invulnerability ticks by attack type/weapon",
+            category = FEATURE
+    )
+    public static boolean damageTickOverrides = false;
+
+    @Rule(desc = "Damage invulnerability ticks for sword melee attacks", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickSword = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for axe melee attacks", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickAxe = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for trident melee attacks", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickTrident = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for other melee attacks", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickMeleeOther = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for projectile damage", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickProjectile = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for explosion damage", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickExplosion = 10;
+
+    @Rule(desc = "Damage invulnerability ticks for other/unknown damage types", category = FEATURE, validate = Validators.NonNegativeNumber.class)
+    public static int damageTickOther = 10;
+
+    // ...existing code...
 }
