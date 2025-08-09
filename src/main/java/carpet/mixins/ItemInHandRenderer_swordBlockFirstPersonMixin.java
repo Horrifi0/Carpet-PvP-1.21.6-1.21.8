@@ -39,12 +39,10 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         if (player == null) return;
         if (hand != InteractionHand.MAIN_HAND) return; // main-hand only
         if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
-        // If the sword's current use animation is BLOCK, let the model override/vanilla handle the pose
-        try {
-            if ("BLOCK".equalsIgnoreCase(stack.getUseAnimation().name())) return;
-        } catch (Throwable ignored) { }
+    // If the player is using the sword at all, do not apply our transform; rely on vanilla/model
+    if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.isUsingItem()) return;
 
-    boolean holding = Minecraft.getInstance().options.keyUse.isDown() || (player.isUsingItem() && player.getUseItem().is(ItemTags.SWORDS));
+    boolean holding = Minecraft.getInstance().options.keyUse.isDown();
     if (!holding && !SwordBlockVisuals.isActive(player)) return;
 
         poseStack.pushPose();

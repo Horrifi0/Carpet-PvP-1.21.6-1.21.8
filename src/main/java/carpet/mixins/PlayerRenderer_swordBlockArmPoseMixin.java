@@ -4,7 +4,6 @@ import carpet.client.SwordBlockVisuals;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
@@ -18,10 +17,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class PlayerRenderer_swordBlockArmPoseMixin {
     @Inject(method = "getArmPose", at = @At("HEAD"), cancellable = true)
     private static void carpet$forceBlockPose(AbstractClientPlayer player, HumanoidArm arm, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-    // Only intervene for our S2C visual window; if the held stack declares consumable:block, let vanilla handle.
+    // Only intervene for our S2C visual window; do not force during actual use (vanilla handles that)
     if (!SwordBlockVisuals.isActive(player)) return;
-    var cons = player.getUseItem().get(DataComponents.CONSUMABLE);
-    if (cons != null && "BLOCK".equalsIgnoreCase(cons.animation().toString())) return;
+    if (player.isUsingItem()) return;
         // Map the arm being rendered to the corresponding hand for item lookup
         InteractionHand hand = (arm == player.getMainArm()) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
     if (player.getItemInHand(hand).is(ItemTags.SWORDS)) {
