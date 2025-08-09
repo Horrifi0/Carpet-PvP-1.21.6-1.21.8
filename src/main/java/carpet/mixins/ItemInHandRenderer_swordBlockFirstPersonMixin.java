@@ -47,15 +47,15 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
 
         float ease;
         if (holding) {
-            ease = 1.0f; // steady pose while held
+            ease = 1.0f;
         } else {
             int left = SwordBlockVisuals.remaining(player);
             ease = Math.min(1.0f, left / 6.0f);
-            ease = ease * ease; // ease-out
+            ease = ease * ease;
         }
 
-        float rotY = -18.0f * ease; // inward tilt
-        float rotX = -10.0f * ease; // slight raise
+        float rotY = -18.0f * ease;
+        float rotX = -10.0f * ease;
         poseStack.mulPose(new Quaternionf().rotationXYZ((float) Math.toRadians(rotX), (float) Math.toRadians(rotY), 0));
     }
 

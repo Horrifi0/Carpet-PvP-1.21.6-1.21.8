@@ -12,8 +12,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 
 public class PvpClientInitializer implements ClientModInitializer {
-    private static int swordBlockRequestCooldown = 0; // ticks
-
     @Override
     public void onInitializeClient() {
         // Register S2C custom payload codec on client
@@ -35,14 +33,12 @@ public class PvpClientInitializer implements ClientModInitializer {
             });
         });
 
-        // Client tick: send C2S request while use key held with a sword (throttled)
+        // Client tick: send C2S request on right-click press with a sword (edge trigger)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.level == null) return;
             var options = client.options;
 
-            if (swordBlockRequestCooldown > 0) swordBlockRequestCooldown--;
-
-            if (options.keyUse.isDown()) {
+            if (options.keyUse.consumeClick()) {
                 // prefer main hand, then offhand
                 InteractionHand hand = InteractionHand.MAIN_HAND;
                 ItemStack stack = client.player.getItemInHand(hand);
@@ -51,10 +47,7 @@ public class PvpClientInitializer implements ClientModInitializer {
                     stack = client.player.getItemInHand(hand);
                 }
                 if (!stack.isEmpty() && stack.is(ItemTags.SWORDS)) {
-                    if (swordBlockRequestCooldown == 0) {
-                        ClientPlayNetworking.send(new SwordBlockRequestPayload(hand));
-                        swordBlockRequestCooldown = 4; // refresh window periodically while held
-                    }
+                    ClientPlayNetworking.send(new SwordBlockRequestPayload(hand));
                 }
             }
         });

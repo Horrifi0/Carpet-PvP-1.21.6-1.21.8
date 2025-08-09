@@ -19,14 +19,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class Player_swordBlockStateMixin extends LivingEntity implements PlayerSwordBlockInterface {
     @Unique private int carpet$swordBlockTicks;
     @Unique private float carpet$pendingKbMultiplier = 1.0F;
-    @Unique private static final int carpet$maxHoldTicks = 20; // cap to avoid permanent hold without refresh
 
     protected Player_swordBlockStateMixin(EntityType<? extends LivingEntity> entityType, Level level) { super(entityType, level); }
 
-    @Override public void carpet$setSwordBlockTicks(int ticks) {
-        // When refreshed by client while holding, extend but cap
-        this.carpet$swordBlockTicks = Math.min(carpet$maxHoldTicks, Math.max(this.carpet$swordBlockTicks, ticks));
-    }
+    @Override public void carpet$setSwordBlockTicks(int ticks) { this.carpet$swordBlockTicks = ticks; }
     @Override public int carpet$getSwordBlockTicks() { return this.carpet$swordBlockTicks; }
 
     @Inject(method = "tick", at = @At("HEAD"))
