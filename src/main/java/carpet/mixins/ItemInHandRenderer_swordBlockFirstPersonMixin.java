@@ -51,7 +51,7 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         ease = ease * ease;
 
         // Roll-only tilt so the sword "turns left" in-place. No pitch/yaw/translation.
-        float baseAngle = 16.0f; // degrees
+        float baseAngle = 60.0f; // increased tilt to >45 degrees
         float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // right-hand turns left on screen
         float roll = dir * baseAngle * ease;
         poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
