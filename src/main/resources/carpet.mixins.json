@@ -181,9 +181,8 @@
     "CustomPacketPayload_networkStuffMixin",
     "ServerGamePacketListenerimpl_connectionMixin",
     "Player_attackCooldown_18CombatMixin",
-    "Player_attackResetTicker_18CombatMixin",
-    "Player_swordBlockStateMixin",
-    "ServerGamePacketListenerImpl_swordBlockMarkerMixin"
+  "Player_attackResetTicker_18CombatMixin",
+  "Player_swordBlockStateMixin"
   ],
   "client": [
     "Minecraft_tickMixin",
@@ -201,7 +200,7 @@
     "LevelRenderer_scarpetRenderMixin",
 
 
-    "ClientCommonPacketListenerImpl_customPacketMixin",
+  "ClientCommonPacketListenerImpl_customPacketMixin",
   "PlayerRenderer_swordBlockArmPoseMixin",
   "ItemInHandRenderer_swordBlockFirstPersonMixin"
   ],

@@ -3,7 +3,6 @@ package carpet.mixins;
 import carpet.CarpetSettings;
 import carpet.fakes.PlayerSwordBlockInterface;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -34,9 +33,10 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
 
     @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
     private void applySwordBlock(ServerLevel serverLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
-    if (!CarpetSettings.swordBlockHitting) return;
-    // Continuous block while holding use on a sword (via consumable block animation)
-    if (this.isUsingItem() && this.getUseItem().is(ItemTags.SWORDS) && amount > 0.0f) {
+        if (!CarpetSettings.swordBlockHitting) return;
+        // Continuous block while holding use on items that declare consumable animation BLOCK
+        var cons = this.getUseItem().get(net.minecraft.core.component.DataComponents.CONSUMABLE);
+        if (this.isUsingItem() && cons != null && "BLOCK".equalsIgnoreCase(cons.animation().toString()) && amount > 0.0f) {
             float reduced = (float) Math.max(0.0, amount * CarpetSettings.swordBlockDamageMultiplier);
             this.carpet$pendingKbMultiplier = (float) CarpetSettings.swordBlockKnockbackMultiplier;
             boolean result = super.hurtServer(serverLevel, source, reduced);
