@@ -40,8 +40,8 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         if (hand != InteractionHand.MAIN_HAND) return; // main-hand only
         if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
 
-        boolean holding = Minecraft.getInstance().options.keyUse.isDown();
-        if (!holding && !SwordBlockVisuals.isActive(player)) return;
+    boolean holding = Minecraft.getInstance().options.keyUse.isDown() || (player.isUsingItem() && player.getUseItem().is(ItemTags.SWORDS));
+    if (!holding && !SwordBlockVisuals.isActive(player)) return;
 
         poseStack.pushPose();
         this.carpet$pushed = true;

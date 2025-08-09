@@ -33,7 +33,7 @@ public class PvpClientInitializer implements ClientModInitializer {
             });
         });
 
-        // Client tick: send C2S request on right-click press with a sword (edge trigger)
+    // Client tick: send C2S request on right-click press with a sword (edge trigger)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.level == null) return;
             var options = client.options;
