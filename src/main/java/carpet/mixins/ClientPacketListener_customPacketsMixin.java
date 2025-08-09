@@ -1,14 +1,19 @@
 package carpet.mixins;
 
+import carpet.client.SwordBlockVisuals;
 import carpet.network.CarpetClient;
 import carpet.network.ClientNetworkHandler;
+import carpet.network.payload.SwordBlockPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -29,6 +34,11 @@ public abstract class ClientPacketListener_customPacketsMixin extends ClientComm
         CarpetClient.gameJoined( minecraft.player);
     }
 
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void onTick(CallbackInfo ci) {
+        SwordBlockVisuals.tick();
+    }
+
     @Inject(method = "handleUnknownCustomPayload", at = @At(
             value = "HEAD"
             ), cancellable = true)
@@ -37,6 +47,14 @@ public abstract class ClientPacketListener_customPacketsMixin extends ClientComm
         if (packet instanceof CarpetClient.CarpetPayload cpp)
         {
             ClientNetworkHandler.onServerData(cpp.data(), minecraft.player);
+            ci.cancel();
+            return;
+        }
+        if (packet instanceof SwordBlockPayload sb) {
+            Entity e = minecraft.level.getEntity(sb.entityId());
+            if (e instanceof AbstractClientPlayer p) {
+                SwordBlockVisuals.activate(p, sb.ticks());
+            }
             ci.cancel();
         }
     }

@@ -4,7 +4,6 @@ import carpet.CarpetSettings;
 import carpet.fakes.PlayerSwordBlockInterface;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -41,14 +40,6 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
             boolean result = super.hurtServer(serverLevel, source, reduced);
             this.invulnerableTime = Math.max(this.invulnerableTime, 5);
             cir.setReturnValue(result);
-        }
-    }
-
-    @Inject(method = "knockback", at = @At("HEAD"))
-    private void scaleKb(Entity attacker, double strength, double x, double z, CallbackInfo ci) {
-        if (CarpetSettings.swordBlockHitting && this.carpet$swordBlockTicks > 0) {
-            // Scale the internal knockback strength via attribute; fallback through pending multiplier
-            attacker.setDeltaMovement(attacker.getDeltaMovement().scale(this.carpet$pendingKbMultiplier));
         }
     }
 }
