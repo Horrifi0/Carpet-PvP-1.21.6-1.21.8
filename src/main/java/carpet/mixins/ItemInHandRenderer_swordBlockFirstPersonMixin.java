@@ -1,6 +1,7 @@
 package carpet.mixins;
 
 import carpet.client.SwordBlockVisuals;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -37,21 +38,24 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         if (player == null) return;
         if (hand != InteractionHand.MAIN_HAND) return; // main-hand only
         if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
-        if (!SwordBlockVisuals.isActive(player)) return;
+
+        boolean holding = Minecraft.getInstance().options.keyUse.isDown();
+        if (!holding && !SwordBlockVisuals.isActive(player)) return;
 
         poseStack.pushPose();
         this.carpet$pushed = true;
 
-        // New block-hitting feel: quick inward tilt and slight upward nudge with a subtle ease-out over window
-        int left = SwordBlockVisuals.remaining(player);
-        float t = Math.min(1.0f, left / 6.0f); // normalize on 6 ticks for feel
-        float ease = t * t; // ease-out
+        float ease;
+        if (holding) {
+            ease = 1.0f; // steady pose while held
+        } else {
+            int left = SwordBlockVisuals.remaining(player);
+            ease = Math.min(1.0f, left / 6.0f);
+            ease = ease * ease; // ease-out
+        }
 
-        float rotY = -20.0f * ease; // tilt inward
-        float rotX = -8.0f * ease;  // raise tip a bit
-        float transX = -0.06f * ease;
-        float transY = 0.02f * ease;
-        poseStack.translate(transX, transY, 0.0f);
+        float rotY = -18.0f * ease; // inward tilt
+        float rotX = -10.0f * ease; // slight raise
         poseStack.mulPose(new Quaternionf().rotationXYZ((float) Math.toRadians(rotX), (float) Math.toRadians(rotY), 0));
     }
 
