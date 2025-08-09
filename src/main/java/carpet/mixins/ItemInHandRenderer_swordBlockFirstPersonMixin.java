@@ -4,7 +4,6 @@ import carpet.client.SwordBlockVisuals;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
@@ -39,10 +38,11 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         this.carpet$pushed = false;
         if (player == null) return;
         if (hand != InteractionHand.MAIN_HAND) return; // main-hand only
-    if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
-    // If the sword has a consumable component with animation:block, let vanilla handle first-person pose
-    var cons = stack.get(DataComponents.CONSUMABLE);
-    if (cons != null && "BLOCK".equalsIgnoreCase(cons.animation().toString())) return;
+        if (stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return;
+        // If the sword's current use animation is BLOCK, let the model override/vanilla handle the pose
+        try {
+            if ("BLOCK".equalsIgnoreCase(stack.getUseAnimation().name())) return;
+        } catch (Throwable ignored) { }
 
     boolean holding = Minecraft.getInstance().options.keyUse.isDown() || (player.isUsingItem() && player.getUseItem().is(ItemTags.SWORDS));
     if (!holding && !SwordBlockVisuals.isActive(player)) return;
