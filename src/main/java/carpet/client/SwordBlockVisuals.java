@@ -29,4 +29,9 @@ public class SwordBlockVisuals {
         Integer left = timers.get(p.getId());
         return left != null && left > 0;
     }
+
+    public static int remaining(AbstractClientPlayer p) {
+        Integer left = timers.get(p.getId());
+        return left == null ? 0 : Math.max(0, left);
+    }
 }
