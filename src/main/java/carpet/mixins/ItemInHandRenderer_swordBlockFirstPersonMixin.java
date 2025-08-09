@@ -57,11 +57,11 @@ public abstract class ItemInHandRenderer_swordBlockFirstPersonMixin {
         float ease = holding ? 1.0f : Math.min(1.0f, SwordBlockVisuals.remaining(player) / 6.0f);
         ease = ease * ease;
 
-        // Yaw-only rotation towards screen center based on main hand. No pitch/roll/translation.
-        float baseAngle = 14.0f; // degrees
-        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
-        float yaw = dir * baseAngle * ease;
-        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, (float) Math.toRadians(yaw), 0f));
+        // Roll-only rotation to "turn left" in screen space, no pitch/yaw/translation.
+        float baseAngle = 16.0f; // degrees
+        float dir = (player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f; // right-hand turns left on screen
+        float roll = dir * baseAngle * ease;
+        poseStack.mulPose(new Quaternionf().rotationXYZ(0f, 0f, (float) Math.toRadians(roll)));
     }
 
     // Pop right after the render call to restore the matrix
