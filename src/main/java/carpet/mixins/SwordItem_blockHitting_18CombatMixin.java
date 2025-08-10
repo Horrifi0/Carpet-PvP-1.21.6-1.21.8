@@ -8,6 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,5 +34,13 @@ public class SwordItem_blockHitting_18CombatMixin {
         if (!stack.is(ItemTags.SWORDS)) return;
         
         cir.setReturnValue(72000); // Very long duration for persistent blocking
+    }
+    
+    @Inject(method = "getUseAnimation", at = @At("HEAD"), cancellable = true)
+    private void setSwordBlockAnimation(ItemStack stack, CallbackInfoReturnable<ItemUseAnimation> cir) {
+        if (!CarpetSettings.swordBlockHitting) return;
+        if (!stack.is(ItemTags.SWORDS)) return;
+        
+        cir.setReturnValue(ItemUseAnimation.BLOCK); // Use shield-like blocking animation
     }
 }
