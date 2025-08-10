@@ -47,3 +47,7 @@ Requirements: Java 21, Gradle wrapper. Manual test steps:
 - Scarpet scripting integration
 - Comprehensive testing framework
 - 1.8 combat features (Spam clicking and block hitting)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=andrewctf/carpet-pvp&type=Date)](https://www.star-history.com/#andrewctf/carpet-pvp&Date)
