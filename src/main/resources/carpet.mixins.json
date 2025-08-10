@@ -11,7 +11,6 @@
     "Player_attackResetTicker_18CombatMixin",
     "Player_swordBlockStateMixin",
     "SwordItem_blockHitting_18CombatMixin",
-    "SwordItem_blockHitting_18CombatMixin",
     "MobCategory_spawnMixin",
     "Commands_customCommandsMixin",
     "Commands_giveCommandMixin",
