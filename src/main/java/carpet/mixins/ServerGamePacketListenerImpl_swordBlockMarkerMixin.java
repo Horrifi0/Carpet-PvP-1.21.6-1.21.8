@@ -29,6 +29,12 @@ public abstract class ServerGamePacketListenerImpl_swordBlockMarkerMixin {
         if (!stack.isEmpty() && stack.is(ItemTags.SWORDS)) {
             int ticks = CarpetSettings.swordBlockWindowTicks;
             ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(ticks);
+            
+            // Force the player to start using the sword to trigger the blocking animation
+            if (!player.isUsingItem()) {
+                player.startUsingItem(hand);
+            }
+            
             // broadcast simple visual cue to nearby clients
             ClientboundCustomPayloadPacket msg = new ClientboundCustomPayloadPacket(new SwordBlockPayload(player.getId(), ticks));
             for (ServerPlayer p : player.level().players()) {
@@ -47,13 +53,18 @@ public abstract class ServerGamePacketListenerImpl_swordBlockMarkerMixin {
         if (!stack.isEmpty() && stack.is(ItemTags.SWORDS)) {
             int ticks = CarpetSettings.swordBlockWindowTicks;
             ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(ticks);
+            
+            // Force the player to start using the sword to trigger the blocking animation
+            if (!player.isUsingItem()) {
+                player.startUsingItem(hand);
+            }
+            
             ClientboundCustomPayloadPacket msg = new ClientboundCustomPayloadPacket(new SwordBlockPayload(player.getId(), ticks));
             for (ServerPlayer p : player.level().players()) {
                 if (p.distanceToSqr(player) < 64*64) {
                     p.connection.send(msg);
                 }
             }
-            ((PlayerSwordBlockInterface) player).carpet$setSwordBlockTicks(CarpetSettings.swordBlockWindowTicks);
         }
     }
 }
