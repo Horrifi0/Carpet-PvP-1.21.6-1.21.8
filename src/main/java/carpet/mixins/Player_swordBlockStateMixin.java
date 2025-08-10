@@ -5,8 +5,6 @@ import carpet.fakes.PlayerSwordBlockInterface;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -39,11 +37,6 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
         if (!CarpetSettings.swordBlockHitting) return;
         // Check if using a sword (via ItemTags check instead of consumable)
         if (this.isUsingItem() && this.getUseItem().is(ItemTags.SWORDS) && amount > 0.0f) {
-    if (!CarpetSettings.swordBlockHitting) return;
-    // Continuous block while holding use on a sword (via consumable block animation)
-    if (this.isUsingItem() && this.getUseItem().is(ItemTags.SWORDS) && amount > 0.0f) {
-        if (!CarpetSettings.swordBlockHitting) return;
-        if (this.carpet$swordBlockTicks > 0 && amount > 0.0f) {
             float reduced = (float) Math.max(0.0, amount * CarpetSettings.swordBlockDamageMultiplier);
             this.carpet$pendingKbMultiplier = (float) CarpetSettings.swordBlockKnockbackMultiplier;
             boolean result = super.hurtServer(serverLevel, source, reduced);
@@ -51,15 +44,4 @@ public abstract class Player_swordBlockStateMixin extends LivingEntity implement
             cir.setReturnValue(result);
         }
     }
-
-
-
-    @Inject(method = "knockback", at = @At("HEAD"))
-    private void scaleKb(Entity attacker, double strength, double x, double z, CallbackInfo ci) {
-        if (CarpetSettings.swordBlockHitting && this.carpet$swordBlockTicks > 0) {
-            // Scale the internal knockback strength via attribute; fallback through pending multiplier
-            attacker.setDeltaMovement(attacker.getDeltaMovement().scale(this.carpet$pendingKbMultiplier));
-        }
-    }
-
 }
