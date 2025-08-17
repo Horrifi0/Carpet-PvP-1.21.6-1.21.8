@@ -5,8 +5,10 @@ Supported version will regularly receive updates, whereas unsupported version wi
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 11.3.x  | :white_check_mark: |
-| 11.2.x  | ✅:                |
+| 12.1.x  | ✅                 |
+| 12.1    | :x:                |
+| 11.3.x  | :x:                |
+| 11.2.x  | :x:                |
 | 10.x    | :x:                |
 
 ## Reporting a Vulnerability 
