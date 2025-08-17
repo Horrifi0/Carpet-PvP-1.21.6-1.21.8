@@ -2,7 +2,7 @@
 
 Carpet PvP is a fork of TheobaldTheBird's Carpet PvP, we aim to provide frequent updates so that Carpet PvP will be supported as soon as possible.
 
-Discord: [https://discord.gg/PAbydjFxKs](Carpet PvP support)
+Discord: [Carpet PvP Support](https://discord.gg/PAbydjFxKs)
 
 ## Supported versions:
 
