@@ -1,4 +1,7 @@
 # Carpet PvP
+![GitHub all releases](https://img.shields.io/github/downloads/AndrewCTF/Carpet-PvP/total?style=for-the-badge)
+![GitHub Repo stars](https://img.shields.io/github/stars/AndrewCTF/Carpet-PvP?style=for-the-badge)
+![Users](https://img.shields.io/badge/users-500%2B-blue?style=for-the-badge)
 
 Carpet PvP is a fork of TheobaldTheBird's Carpet PvP, we aim to provide frequent updates so that Carpet PvP will be supported as soon as possible.
 
