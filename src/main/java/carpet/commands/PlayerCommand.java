@@ -69,6 +69,7 @@ public class PlayerCommand
                         .then(makeActionCommand("use", ActionType.USE))
                         .then(makeActionCommand("jump", ActionType.JUMP))
                         .then(makeActionCommand("attack", ActionType.ATTACK))
+                        .then(literal("crit").executes(PlayerCommand::performCrit))
                         .then(makeActionCommand("drop", ActionType.DROP_ITEM))
                         .then(makeDropCommand("drop", false))
                         .then(makeActionCommand("dropStack", ActionType.DROP_STACK))
@@ -100,6 +101,7 @@ public class PlayerCommand
                                 .then(literal("west").executes(manipulation(ap -> ap.look(Direction.WEST))))
                                 .then(literal("up").executes(manipulation(ap -> ap.look(Direction.UP))))
                                 .then(literal("down").executes(manipulation(ap -> ap.look(Direction.DOWN))))
+                                .then(literal("nearest").executes(manipulation(ap -> ap.start(ActionType.LOOK_AT_NEAREST, Action.continuous()))))
                                 .then(literal("at").then(argument("position", Vec3Argument.vec3())
                                         .executes(c -> manipulate(c, ap -> ap.lookAt(Vec3Argument.getVec3(c, "position"))))))
                                 .then(argument("direction", RotationArgument.rotation())
@@ -643,5 +645,48 @@ public class PlayerCommand
             LOGGER.error("Failed to display equipment for player {} (requested by {}): {}", player.getName().getString(), source.getTextName(), e.getMessage(), e);
             return 0;
         }
+    }
+
+    private static int performCrit(CommandContext<CommandSourceStack> context)
+    {
+        if (cantManipulate(context)) return 0;
+
+        ServerPlayer player = getPlayer(context);
+        EntityPlayerActionPack ap = ((ServerPlayerInterface) player).getActionPack();
+
+        // Find nearest player to look at
+        List<ServerPlayer> players = player.getServer().getPlayerList().getPlayers();
+        ServerPlayer nearestPlayer = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        for (ServerPlayer otherPlayer : players)
+        {
+            if (otherPlayer != player && !otherPlayer.isSpectator())
+            {
+                double distance = player.distanceToSqr(otherPlayer);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestPlayer = otherPlayer;
+                }
+            }
+        }
+
+        // Look at nearest player's feet
+        if (nearestPlayer != null)
+        {
+            Vec3 feetPos = nearestPlayer.position();
+            ap.lookAt(feetPos);
+        }
+
+        // Perform crit combo: sprint > forward > jump > stop sprint > stop moving > attack while falling
+        ap.setSprinting(true);
+        ap.setForward(1);
+        ap.start(ActionType.JUMP, Action.once());
+        ap.setSprinting(false);  // Must stop sprinting to avoid sprint-knockback
+        ap.setForward(0);
+        ap.start(ActionType.ATTACK, Action.onceDelayed(8));
+
+        return 1;
     }
 }

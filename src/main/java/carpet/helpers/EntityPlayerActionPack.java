@@ -22,6 +22,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.entity.vehicle.Minecart;
 import net.minecraft.world.item.ItemStack;
@@ -528,6 +529,36 @@ public class EntityPlayerActionPack
                 player.setItemInHand(InteractionHand.MAIN_HAND, itemStack_1);
                 return false;
             }
+        },
+        LOOK_AT_NEAREST(true)
+        {
+            @Override
+            boolean execute(ServerPlayer player, Action action)
+            {
+                List<ServerPlayer> players = player.getServer().getPlayerList().getPlayers();
+                ServerPlayer nearestPlayer = null;
+                double nearestDistance = Double.MAX_VALUE;
+                
+                for (ServerPlayer otherPlayer : players)
+                {
+                    if (otherPlayer != player && !otherPlayer.isSpectator())
+                    {
+                        double distance = player.distanceToSqr(otherPlayer);
+                        if (distance < nearestDistance)
+                        {
+                            nearestDistance = distance;
+                            nearestPlayer = otherPlayer;
+                        }
+                    }
+                }
+                
+                if (nearestPlayer != null)
+                {
+                    Vec3 eyePos = nearestPlayer.getEyePosition();
+                    player.lookAt(EntityAnchorArgument.Anchor.EYES, eyePos);
+                }
+                return false;
+            }
         };
 
         public final boolean preventSpectator;
@@ -568,6 +599,11 @@ public class EntityPlayerActionPack
         public static Action once()
         {
             return new Action(1, 1, 0, false);
+        }
+
+        public static Action onceDelayed(int offset)
+        {
+            return new Action(1, 1, offset, false);
         }
 
         public static Action continuous()

@@ -4,25 +4,44 @@ import carpet.patches.EntityPlayerMPFake;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import net.minecraft.world.entity.Entity;
 
 /**
  * Mixin to fix fake player critical hits in Minecraft 1.21.4+
  * 
  * In 1.21.4, there were changes to movement mechanics that prevent fake players
  * from performing critical hits. This mixin ensures that fake players can still
- * perform critical hits by overriding the onGround check.
+ * perform critical hits by setting fallDistance when they're falling.
  */
 @Mixin(Player.class)
 public abstract class Player_fakePlayerCritsMixin
 {
     /**
+     * Inject before the attack to ensure fake players have proper fallDistance set
+     */
+    @Inject(method = "attack", at = @At("HEAD"))
+    private void ensureFakePlayerFallDistance(Entity target, CallbackInfo ci)
+    {
+        Player player = (Player)(Object)this;
+        if (player instanceof EntityPlayerMPFake fakePlayer)
+        {
+            // If fake player is falling (negative Y velocity and not on ground), ensure fallDistance is set
+            if (fakePlayer.getDeltaMovement().y < 0.0 && !fakePlayer.onGround())
+            {
+                // Set a minimum fall distance to enable crits
+                if (fakePlayer.fallDistance <= 0.0F)
+                {
+                    fakePlayer.fallDistance = 0.1F;
+                }
+            }
+        }
+    }
+    
+    /**
      * Redirects the onGround() check in the attack method for fake players.
-     * 
-     * The issue in 1.21.4 is that fake players may have their onGround flag
-     * incorrectly set to true even when they should be falling. This redirect
-     * ensures that when a fake player is falling (velocity.y < 0), the onGround
-     * check returns false, allowing critical hits to work properly.
      */
     @Redirect(
             method = "attack",
@@ -38,10 +57,7 @@ public abstract class Player_fakePlayerCritsMixin
         if (player instanceof EntityPlayerMPFake fakePlayer)
         {
             // Check if the fake player is falling
-            boolean isFalling = fakePlayer.getDeltaMovement().y < 0.0;
-            
-            // If falling, return false to allow critical hits
-            if (isFalling)
+            if (fakePlayer.getDeltaMovement().y < 0.0)
             {
                 return false;
             }
