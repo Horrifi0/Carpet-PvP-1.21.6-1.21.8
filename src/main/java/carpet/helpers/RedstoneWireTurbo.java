@@ -357,7 +357,7 @@ public class RedstoneWireTurbo
             case 0: {
                 // Both rx and rz are -1 (northwest)
                 // Randomly choose one to be forward.
-                final int j = ThreadLocalRandom.current().nextInt(0, 1);
+                final int j = ThreadLocalRandom.current().nextInt(0, 2);
                 return (j==0) ? North : West;
             }
             case 1: {
@@ -368,7 +368,7 @@ public class RedstoneWireTurbo
             case 2: {
                 // rx=1, rz=-1 (northeast)
                 // Choose randomly between north and east
-                final int j = ThreadLocalRandom.current().nextInt(0, 1);
+                final int j = ThreadLocalRandom.current().nextInt(0, 2);
                 return (j==0) ? North : East;
             }
             case 3: {
@@ -390,7 +390,7 @@ public class RedstoneWireTurbo
             case 6: {
                 // rx=-1, rz=1 (southwest)
                 // Choose randomly between south and west
-                final int j = ThreadLocalRandom.current().nextInt(0, 1);
+                final int j = ThreadLocalRandom.current().nextInt(0, 2);
                 return (j==0) ? South : West;
             }
             case 7: {
@@ -401,7 +401,7 @@ public class RedstoneWireTurbo
             case 8: {
                 // rx=1, rz=1 (southeast)
                 // Choose randomly between south and east
-                final int j = ThreadLocalRandom.current().nextInt(0, 1);
+                final int j = ThreadLocalRandom.current().nextInt(0, 2);
                 return (j==0) ? South : East;
             }
         }

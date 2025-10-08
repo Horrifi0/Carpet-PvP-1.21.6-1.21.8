@@ -335,7 +335,13 @@ public class AppStoreManager
                     while (Files.exists(trashPath))
                     {
                         String[] nameAndExtension = appFileName.split("\\.");
-                        String newFileName = String.format(nameAndExtension[0] + "%02d." + nameAndExtension[1], i);
+                        String newFileName;
+                        if (nameAndExtension.length >= 2) {
+                            newFileName = String.format(nameAndExtension[0] + "%02d." + nameAndExtension[1], i);
+                        } else {
+                            // No extension
+                            newFileName = String.format(nameAndExtension[0] + "%02d", i);
+                        }
                         trashPath = trashPath.getParent().resolve(newFileName);
                         i++;
                     }

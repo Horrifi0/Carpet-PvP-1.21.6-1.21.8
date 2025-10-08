@@ -345,8 +345,10 @@ public class SpawnReporter
                 {
                     double hours = overall_spawn_ticks.getLong(key)/72000.0;
                     long spawnAttemptsForCategory = spawn_attempts.getLong(key);
+                    String categoryCode = category.getName();
+                    categoryCode = categoryCode.length() >= 3 ? categoryCode.substring(0,3) : categoryCode;
                     report.add(Messenger.s(String.format(" > %s%s (%.1f min), %.1f m/t, %%{%.1fF %.1f- %.1f+}; %.2f s/att",
-                        category.getName().substring(0,3), getWorldCode(dim),
+                        categoryCode, getWorldCode(dim),
                         60*hours,
                         (1.0D * spawn_cap_count.getLong(key)) / spawnAttemptsForCategory,
                         (100.0D * spawn_ticks_full.getLong(key)) / spawnAttemptsForCategory,
@@ -408,7 +410,8 @@ public class SpawnReporter
         rep.add(Messenger.s("Spawns:"));
         for (MobCategory category : cachedMobCategories())
         {
-            String categoryCode = String.valueOf(category).substring(0, 3);
+            String categoryName = String.valueOf(category);
+            String categoryCode = categoryName.length() >= 3 ? categoryName.substring(0, 3) : categoryName;
             WeightedList<MobSpawnSettings.SpawnerData> lst = getSpawnEntries(worldIn, worldIn.structureManager(), worldIn.getChunkSource().getGenerator(), category, pos, worldIn.getBiome(pos));
             if (lst != null && !lst.isEmpty())
             {

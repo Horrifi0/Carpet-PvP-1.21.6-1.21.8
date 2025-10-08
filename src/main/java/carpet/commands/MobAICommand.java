@@ -34,11 +34,18 @@ public class MobAICommand
                         then(argument("aspect", StringArgumentType.word()).
                                 suggests( (c, b) -> suggest(MobAI.availableFor(getSummonableEntityType(c, "entity type").value()),b)).
                                 executes( (c) -> {
-                                    MobAI.startTracking(
-                                            getSummonableEntityType(c, "entity type").value(),
-                                            MobAI.TrackingType.valueOf(StringArgumentType.getString(c, "aspect").toUpperCase())
-                                    );
-                                    return 1;
+                                    String aspect = StringArgumentType.getString(c, "aspect").toUpperCase();
+                                    try {
+                                        MobAI.TrackingType trackingType = MobAI.TrackingType.valueOf(aspect);
+                                        MobAI.startTracking(
+                                                getSummonableEntityType(c, "entity type").value(),
+                                                trackingType
+                                        );
+                                        return 1;
+                                    } catch (IllegalArgumentException e) {
+                                        carpet.utils.Messenger.m(c.getSource(), "r Invalid tracking type: " + aspect);
+                                        return 0;
+                                    }
                                 })));
         dispatcher.register(command);
     }

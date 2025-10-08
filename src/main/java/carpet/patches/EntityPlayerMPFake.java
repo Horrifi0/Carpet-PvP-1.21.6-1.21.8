@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +64,23 @@ public class EntityPlayerMPFake extends ServerPlayer
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntityPlayerMPFake.class);
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private static final Set<String> spawning = new HashSet<>();
+    private static final Set<String> spawning = ConcurrentHashMap.newKeySet();
+    
+    // Shutdown hook to properly close executor on server shutdown
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            LOGGER.info("Shutting down fake player executor service");
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }));
+    }
 
     public Runnable fixStartingPosition = () -> {};
     public boolean isAShadow;
@@ -75,7 +92,7 @@ public class EntityPlayerMPFake extends ServerPlayer
     
     // Equipment persistence storage
     private final Map<EquipmentSlot, ItemStack> persistentEquipment = new HashMap<>();
-    private static final Map<String, Map<EquipmentSlot, ItemStack>> globalEquipmentStorage = new HashMap<>();
+    private static final Map<String, Map<EquipmentSlot, ItemStack>> globalEquipmentStorage = new ConcurrentHashMap<>();
 
     // Returns true if it was successful, false if couldn't spawn due to the player not existing in Mojang servers
     public static boolean createFake(String username, MinecraftServer server, Vec3 pos, double yaw, double pitch, ResourceKey<Level> dimensionId, GameType gamemode, boolean flying)
@@ -167,6 +184,9 @@ public class EntityPlayerMPFake extends ServerPlayer
         playerShadow.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(0.6F);
         playerShadow.entityData.set(DATA_PLAYER_MODE_CUSTOMISATION, player.getEntityData().get(DATA_PLAYER_MODE_CUSTOMISATION));
 
+        // Set spawn position to prevent crashes on death - use player's current position
+        playerShadow.spawnPos = new Vec3(player.getX(), player.getY(), player.getZ());
+        playerShadow.spawnYaw = player.getYRot();
 
         server.getPlayerList().broadcastAll(new ClientboundRotateHeadPacket(playerShadow, (byte) (player.yHeadRot * 256 / 360)), playerShadow.level().dimension());
         server.getPlayerList().broadcastAll(new ClientboundPlayerInfoUpdatePacket(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER, playerShadow));
@@ -183,7 +203,12 @@ public class EntityPlayerMPFake extends ServerPlayer
 
     public static EntityPlayerMPFake respawnFake(MinecraftServer server, ServerLevel level, GameProfile profile, ClientInformation cli)
     {
-        return new EntityPlayerMPFake(server, level, profile, cli, false);
+        EntityPlayerMPFake fake = new EntityPlayerMPFake(server, level, profile, cli, false);
+        // Set default spawn position to world spawn to prevent crashes on death
+        BlockPos worldSpawn = level.getSharedSpawnPos();
+        fake.spawnPos = Vec3.atBottomCenterOf(worldSpawn);
+        fake.spawnYaw = level.getSharedSpawnAngle();
+        return fake;
     }
 
     public static boolean isSpawningPlayer(String username)
@@ -427,10 +452,13 @@ public class EntityPlayerMPFake extends ServerPlayer
             super.tick();
             this.doTick();
         }
-        catch (NullPointerException ignored)
+        catch (NullPointerException e)
         {
-            // happens with that paper port thingy - not sure what that would fix, but hey
-            // the game not gonna crash violently.
+            // Paper/Spigot compatibility: Some Paper implementations can throw NPE during tick
+            // Log the error for debugging but don't crash the server
+            LOGGER.warn("NullPointerException in fake player {} tick - this may indicate a compatibility issue: {}", 
+                getName().getString(), e.getMessage());
+            LOGGER.debug("NPE Stack trace for debugging:", e);
         }
 
 
@@ -447,14 +475,37 @@ public class EntityPlayerMPFake extends ServerPlayer
     public void die(DamageSource cause) {
         shakeOff();
         super.die(cause);
+        
+        // Handle equipment based on game rules and settings
+        handleRespawnEquipment();
+        
+        // Notify about death
         kill(this.getCombatTracker().getDeathMessage());
-        EntityPlayerMPFake.executor.schedule(this::respawn, 1L, TimeUnit.MILLISECONDS);
+        
+        // Schedule respawn
+        EntityPlayerMPFake.executor.schedule(() -> {
+            if (!this.isRemoved() && this.level() != null) {
+                this.respawn();
+            } else {
+                LOGGER.debug("Skipping respawn for removed fake player {}", getName().getString());
+            }
+        }, 1L, TimeUnit.MILLISECONDS);
+        
+        // Reset stats
         this.setHealth(20);
         this.foodData = new FoodData();
         giveExperienceLevels(-(experienceLevel + 1));
-        kill(this.getCombatTracker().getDeathMessage());
+        
+        // Teleport to spawn position
         this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
-        EntityPlayerMPFake.executor.schedule(() -> this.setDeltaMovement(0, 0, 0), 1L, TimeUnit.MILLISECONDS);
+        
+        // Reset velocity with safety check
+        EntityPlayerMPFake.executor.schedule(() -> {
+            if (!this.isRemoved() && this.level() != null) {
+                this.setDeltaMovement(0, 0, 0);
+                LOGGER.debug("Reset velocity for fake player {} after death", getName().getString());
+            }
+        }, 10L, TimeUnit.MILLISECONDS);
     }
     
     /**
@@ -471,18 +522,15 @@ public class EntityPlayerMPFake extends ServerPlayer
                 LOGGER.debug("Restored all equipment for fake player {} after respawn (keepInventory=true)", 
                     getName().getString());
             } else {
-                // For fake players, we might want to keep equipment for testing purposes
-                // This can be controlled by a carpet setting in the future
-                boolean keepFakePlayerEquipment = true; // Default to keeping equipment for testing
-                
-                if (keepFakePlayerEquipment) {
+                // For fake players, check carpet setting for equipment persistence
+                if (CarpetSettings.fakePlayersKeepEquipment) {
                     restoreEquipmentState();
-                    LOGGER.debug("Restored equipment for fake player {} after respawn (fake player equipment persistence enabled)", 
+                    LOGGER.debug("Restored equipment for fake player {} after respawn (fakePlayersKeepEquipment=true)", 
                         getName().getString());
                 } else {
                     // Clear equipment state if not keeping it
                     clearSavedEquipmentState();
-                    LOGGER.debug("Cleared equipment for fake player {} after respawn (fake player equipment persistence disabled)", 
+                    LOGGER.debug("Cleared equipment for fake player {} after respawn (fakePlayersKeepEquipment=false)", 
                         getName().getString());
                 }
             }
@@ -503,9 +551,15 @@ public class EntityPlayerMPFake extends ServerPlayer
             this.foodData = new FoodData();
             this.teleportTo(spawnPos.x, spawnPos.y, spawnPos.z);
             
-            // Ensure equipment synchronization after respawn
+            // Ensure equipment synchronization after respawn with safety check
             executor.schedule(() -> {
                 try {
+                    // Verify player still exists before syncing
+                    if (this.isRemoved() || this.level() == null) {
+                        LOGGER.debug("Skipping equipment sync - fake player {} no longer exists", 
+                            getName().getString());
+                        return;
+                    }
                     syncAllEquipmentToClients();
                     LOGGER.debug("Equipment synchronized after respawn for fake player {}", getName().getString());
                 } catch (Exception e) {
@@ -559,14 +613,22 @@ public class EntityPlayerMPFake extends ServerPlayer
             
             ServerPlayer result = super.teleport(teleportTransition);
             
+            // Handle End game victory teleport
             if (wonGame) {
+                LOGGER.debug("Fake player {} won the game, handling respawn after End victory", getName().getString());
                 ServerboundClientCommandPacket p = new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN);
                 connection.handleClientCommand(p);
             }
 
-            // Handle dimension change completion
-            if (connection.player.isChangingDimension()) {
-                connection.player.hasChangedDimension();
+            // Handle dimension change completion with proper validation
+            if (result != null && result.connection != null && result.connection.player != null) {
+                if (result.connection.player.isChangingDimension()) {
+                    result.connection.player.hasChangedDimension();
+                    LOGGER.debug("Completed dimension change state for fake player {}", result.getName().getString());
+                }
+            } else {
+                LOGGER.warn("Unable to complete dimension change state - result or connection is null for fake player {}", 
+                    getName().getString());
             }
             
             // Restore equipment state after teleportation if this is still the same player instance
@@ -574,6 +636,12 @@ public class EntityPlayerMPFake extends ServerPlayer
                 // Schedule equipment restoration to happen after teleportation is complete
                 executor.schedule(() -> {
                     try {
+                        // Verify player still exists before restoring equipment
+                        if (this.isRemoved() || this.level() == null) {
+                            LOGGER.debug("Skipping equipment restoration - fake player {} no longer exists", 
+                                getName().getString());
+                            return;
+                        }
                         restoreEquipmentState();
                         LOGGER.debug("Equipment restoration completed after dimension teleport for fake player {}", 
                             getName().getString());
@@ -586,6 +654,12 @@ public class EntityPlayerMPFake extends ServerPlayer
                 // If a new instance was created, transfer equipment state
                 executor.schedule(() -> {
                     try {
+                        // Verify new player instance still exists
+                        if (fakeResult.isRemoved() || fakeResult.level() == null) {
+                            LOGGER.debug("Skipping equipment transfer - new fake player instance {} no longer exists", 
+                                fakeResult.getName().getString());
+                            return;
+                        }
                         fakeResult.restoreEquipmentState();
                         LOGGER.debug("Equipment transferred to new instance after dimension teleport for fake player {}", 
                             getName().getString());
@@ -610,7 +684,7 @@ public class EntityPlayerMPFake extends ServerPlayer
             ItemStack stack = this.getUseItem();
             // Check if this is an attack that can disable shields (axes can disable shields)
             boolean canDisable = source.getEntity() instanceof LivingEntity le && 
-                                le.getMainHandItem().getItem().toString().contains("axe");
+                                le.getMainHandItem().is(net.minecraft.tags.ItemTags.AXES);
             if(canDisable){
                 this.playSound(SoundEvents.SHIELD_BREAK.value(), 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F);
                 this.stopUsingItem();
@@ -620,10 +694,14 @@ public class EntityPlayerMPFake extends ServerPlayer
                 }
                 String ign = this.getGameProfile().getName();
                 MinecraftServer srv = this.level().getServer();
-                CommandSourceStack commandSource = srv.createCommandSourceStack().withSuppressedOutput();
-                ParseResults<CommandSourceStack> parseResults
-                        = srv.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable", ign), commandSource);
-                srv.getCommands().performCommand(parseResults, "");
+                if (srv != null) {
+                    CommandSourceStack commandSource = srv.createCommandSourceStack().withSuppressedOutput();
+                    ParseResults<CommandSourceStack> parseResults
+                            = srv.getCommands().getDispatcher().parse(String.format("function practicebot:shielddisable %s", ign), commandSource);
+                    srv.getCommands().performCommand(parseResults, "");
+                } else {
+                    LOGGER.warn("Cannot execute shield disable function for {} - server is null", getName().getString());
+                }
             } else {
                 this.playSound(SoundEvents.SHIELD_BLOCK.value(), 1.0F, 0.8F + this.level().random.nextFloat() * 0.4F);
             }

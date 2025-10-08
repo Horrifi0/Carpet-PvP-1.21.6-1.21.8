@@ -279,7 +279,7 @@ public class EntityPlayerActionPack
         Inventory inv = player.getInventory(); // getInventory;
         if (selectedSlot == -2) // all
         {
-            for (int i = inv.getContainerSize(); i >= 0; i--)
+            for (int i = inv.getContainerSize() - 1; i >= 0; i--)
                 dropItemFromSlot(i, dropAll);
         }
         else // one slot

@@ -573,6 +573,13 @@ public class CarpetSettings
     @Rule(desc = "Allows listing fake players on the multiplayer screen", category = COMMAND)
     public static boolean allowListingFakePlayers = false;
 
+    @Rule(
+            desc = "Fake players keep equipment after death",
+            extra = "When enabled, fake players retain their equipment after dying, even without keepInventory gamerule",
+            category = {COMMAND, EXPERIMENTAL}
+    )
+    public static boolean fakePlayersKeepEquipment = true;
+
     @Rule(desc = "Allows to track mobs AI via /track command", category = COMMAND)
     public static String commandTrackAI = "ops";
 
